@@ -64,19 +64,30 @@
 /* Job workspace split layout */
 .job-workspace {
   display: grid;
-  grid-template-columns: 380px minmax(0, 1fr);
+  grid-template-columns: minmax(340px, 380px) minmax(0, 1fr);
   gap: 24px;
   align-items: start;
+  min-width: 0;
 }
 
 .left-rail {
   display: grid;
   gap: 24px;
+  min-width: 0;
+}
+
+.job-workspace .panel,
+.job-workspace label,
+.job-workspace input,
+.job-workspace select,
+.job-workspace button {
+  min-width: 0;
 }
 
 .settings-grid {
   display: grid;
   gap: 24px;
+  min-width: 0;
 }
 
 /* Path inputs with browse buttons */
@@ -87,6 +98,7 @@
 .input-with-action {
   display: flex;
   gap: 8px;
+  min-width: 0;
 }
 
 .input-with-action input {
@@ -207,6 +219,7 @@
 .download-console .primary-action {
   min-height: 42px;
   white-space: nowrap;
+  padding-inline: 14px;
 }
 
 .download-copy.selected,
@@ -346,6 +359,10 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
+}
+
+.two-columns > * {
+  min-width: 0;
 }
 
 /* Toggle Checkboxes layout */
@@ -648,7 +665,7 @@
 }
 
 /* Responsive workspace overrides */
-@media (max-width: 980px) {
+@media (max-width: 1180px) {
   .readiness-strip {
     grid-template-columns: 1fr;
     gap: 12px;
@@ -656,5 +673,21 @@
 
   .job-workspace {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .download-console,
+  .download-row,
+  .file-name-composer,
+  .input-with-action {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+  }
+
+  .download-console .primary-action,
+  .download-row button,
+  .input-with-action button {
+    width: 100%;
   }
 }
