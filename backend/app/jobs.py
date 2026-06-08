@@ -12,8 +12,11 @@ from .eta import estimate_job, smooth_eta
 from .file_browser import resolve_managed_path
 from .gpu import read_gpu_snapshot
 from .models import PIPELINE_STAGES, TERMINAL_JOB_STATUSES
+from .pipeline.encode import build_encode_command
+from .pipeline.ffmpeg import build_lossless_intermediate_command, run_command
+from .pipeline.seedvr2 import SeedVR2Adapter
 from .pipeline.stats import update_performance_profiles
-from .schemas import JobCreate
+from .schemas import EncodeOptions, JobCreate, PreprocessOptions, SeedVR2Options
 from .video_probe import run_ffprobe
 
 
@@ -383,6 +386,9 @@ def run_job(conn: sqlite3.Connection, job_id: int, settings: Settings, sleep_sec
         return get_job(conn, job_id) or {}
     append_log(conn, job_id, "Pipeline runner is using the mock stage executor." if settings.mock_pipeline else "Pipeline runner started.")
 
+    if not settings.mock_pipeline:
+        return _run_real_job(conn, job, settings, job_started)
+
     try:
         frames_total = max(int(job.get("frames_total") or job.get("source_frame_count") or 300), 1)
         live_eta: float | None = job.get("estimated_total_seconds_initial")
@@ -428,6 +434,92 @@ def run_job(conn: sqlite3.Connection, job_id: int, settings: Settings, sleep_sec
     except Exception as exc:
         _mark_complete(conn, job_id, "failed", job_started, str(exc))
         raise
+
+
+def _run_real_job(conn: sqlite3.Connection, job: Mapping[str, Any], settings: Settings, job_started: float) -> dict[str, Any]:
+    job_id = int(job["id"])
+    log_path = Path(job["log_path"] or settings.data_dir / "logs" / f"job-{job_id}.log")
+    options = json.loads(job.get("options_json") or "{}")
+    frames_total = max(int(job.get("frames_total") or job.get("source_frame_count") or 1), 1)
+    input_path = resolve_managed_path(settings, str(job["input_path"]), "input", must_exist=True)
+    output_path = Path(str(job["output_path"]))
+    work_dir = settings.data_dir / "work" / f"job-{job_id}"
+    work_dir.mkdir(parents=True, exist_ok=True)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    preprocess = PreprocessOptions(**(options.get("preprocessing") or {}))
+    seedvr2 = SeedVR2Options(**(options.get("seedvr2") or {}))
+    encode = EncodeOptions(**(options.get("encode") or {}))
+    intermediate_path = work_dir / "preprocessed.mkv"
+    upscaled_path = work_dir / "seedvr2-upscaled.mkv"
+
+    try:
+        _run_external_stage(conn, job, "probe", 0, 1, lambda: append_log(conn, job_id, "Source metadata is already prepared."))
+        _run_external_stage(
+            conn,
+            job,
+            "preprocess",
+            1,
+            frames_total,
+            lambda: _require_success(build_lossless_intermediate_command(settings.ffmpeg_path, input_path, intermediate_path, preprocess), log_path),
+        )
+        adapter = SeedVR2Adapter(settings.seedvr2_cli_path, settings.seedvr2_model_dir, repo_dir=settings.seedvr2_repo_dir)
+        _run_external_stage(
+            conn,
+            job,
+            "upscale",
+            2,
+            frames_total,
+            lambda: adapter.run(
+                intermediate_path,
+                upscaled_path,
+                seedvr2,
+                log_path,
+                target_width=job.get("target_width"),
+                target_height=job.get("target_height"),
+            ),
+        )
+        _run_external_stage(conn, job, "sharpen", 3, frames_total, lambda: append_log(conn, job_id, "No separate sharpen stage configured."))
+        _run_external_stage(
+            conn,
+            job,
+            "encode",
+            4,
+            frames_total,
+            lambda: _require_success(build_encode_command(settings.ffmpeg_path, upscaled_path, input_path, output_path, encode), log_path),
+        )
+        _run_external_stage(conn, job, "mux", 5, frames_total, lambda: append_log(conn, job_id, "Audio mux and metadata sync were handled during encode."))
+        _mark_complete(conn, job_id, "complete", job_started)
+        update_performance_profiles(conn, job_id)
+        return get_job(conn, job_id) or {}
+    except Exception as exc:
+        _mark_complete(conn, job_id, "failed", job_started, str(exc))
+        raise
+
+
+def _run_external_stage(
+    conn: sqlite3.Connection,
+    job: Mapping[str, Any],
+    stage_name: str,
+    stage_index: int,
+    frames_total: int,
+    action: Any,
+) -> None:
+    job_id = int(job["id"])
+    stage_id = _start_stage(conn, job, stage_name, frames_total)
+    stage_started = time.monotonic()
+    gpu_samples = [read_gpu_snapshot().as_dict()]
+    action()
+    gpu_samples.append(read_gpu_snapshot().as_dict())
+    _update_progress(conn, job_id, stage_id, stage_name, stage_index, frames_total, frames_total)
+    _finish_stage(conn, stage_id, "complete", frames_total, frames_total, stage_started, gpu_samples)
+    append_log(conn, job_id, f"Stage complete: {stage_name}.")
+
+
+def _require_success(command: list[str], log_path: Path) -> None:
+    result = run_command(command, log_path)
+    if result.returncode != 0:
+        raise RuntimeError(f"Command failed with exit code {result.returncode}: {' '.join(command)}")
 
 
 def run_next_job(conn: sqlite3.Connection, settings: Settings, sleep_seconds: float = 0.2) -> int | None:

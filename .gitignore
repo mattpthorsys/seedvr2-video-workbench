@@ -33,6 +33,8 @@ data/logs/*
 !data/logs/.gitkeep
 models/*
 !models/.gitkeep
+seedvr/*
+!seedvr/.gitkeep
 external/*
 !external/.gitkeep
 

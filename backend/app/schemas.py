@@ -122,3 +122,7 @@ class ModelTestRequest(BaseModel):
     temporal_overlap: int = 0
     run_inference: bool = False
     timeout_seconds: int = 300
+
+
+class ModelDownloadRequest(BaseModel):
+    model: Literal["3B", "7B"] = "3B"

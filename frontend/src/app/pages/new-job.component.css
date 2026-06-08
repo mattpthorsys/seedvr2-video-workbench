@@ -236,6 +236,51 @@
   margin-top: 4px;
 }
 
+.download-row {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-premium);
+}
+
+.download-copy {
+  min-width: 0;
+}
+
+.download-copy span {
+  color: var(--brand-cyan);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.download-copy small {
+  display: block;
+  margin-top: 4px;
+}
+
+.download-bar {
+  height: 6px;
+  margin-top: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.12);
+}
+
+.download-bar i {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--brand-cyan), var(--brand-teal));
+  transition: width 0.3s ease;
+}
+
 .test-result {
   margin-top: 14px;
   padding: 12px;

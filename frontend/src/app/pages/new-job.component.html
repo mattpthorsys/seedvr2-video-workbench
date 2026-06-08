@@ -84,6 +84,18 @@
           <span>{{ model.name }}</span>
           <strong>{{ model.ready ? 'Installed' : 'Missing' }}</strong>
           <small>{{ model.model_file_count }} files ({{ model.size_bytes | number }} bytes)</small>
+          <div class="download-row" *ngIf="downloadFor(model.name) as download">
+            <div class="download-copy">
+              <span>{{ download.status }}</span>
+              <small>{{ download.message }} {{ download.bytes_downloaded | number }} / {{ download.estimated_bytes ? (download.estimated_bytes | number) : 'unknown' }} bytes</small>
+              <div class="download-bar">
+                <i [style.width.%]="downloadPercent(download)"></i>
+              </div>
+            </div>
+            <button type="button" (click)="startModelDownload(model.name)" [disabled]="model.ready || isDownloading(model.name)">
+              {{ model.ready ? 'Ready' : isDownloading(model.name) ? 'Downloading' : 'Download' }}
+            </button>
+          </div>
         </div>
       </div>
       <div class="button-row">

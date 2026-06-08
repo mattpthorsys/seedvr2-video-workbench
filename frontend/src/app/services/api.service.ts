@@ -88,6 +88,31 @@ export interface ModelStatus {
   mock_pipeline: boolean;
 }
 
+export interface ModelDownloadStatus {
+  model: string;
+  status: 'idle' | 'queued' | 'running' | 'complete' | 'failed';
+  repo_id: string;
+  target_dir: string;
+  message: string;
+  started_at?: string | null;
+  finished_at?: string | null;
+  error?: string | null;
+  bytes_downloaded: number;
+  estimated_bytes?: number | null;
+}
+
+export interface ModelDownloadOption {
+  model: string;
+  repo_id: string;
+  description: string;
+  estimated_bytes: number;
+}
+
+export interface ModelDownloadsResponse {
+  options: ModelDownloadOption[];
+  downloads: ModelDownloadStatus[];
+}
+
 export interface ModelTestResult {
   ok: boolean;
   status: string;
@@ -129,6 +154,14 @@ export class ApiService {
 
   models(): Observable<ModelStatus> {
     return this.http.get<ModelStatus>('/api/models');
+  }
+
+  modelDownloads(): Observable<ModelDownloadsResponse> {
+    return this.http.get<ModelDownloadsResponse>('/api/models/downloads');
+  }
+
+  startModelDownload(model: string): Observable<ModelDownloadStatus> {
+    return this.http.post<ModelDownloadStatus>('/api/models/downloads', { model });
   }
 
   testModel(payload: unknown): Observable<ModelTestResult> {

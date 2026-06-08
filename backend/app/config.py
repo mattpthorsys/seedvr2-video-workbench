@@ -23,6 +23,7 @@ def _sqlite_path_from_url(database_url: str) -> Path:
 class Settings:
     data_dir: Path
     database_url: str
+    seedvr2_repo_dir: Path
     seedvr2_cli_path: str
     seedvr2_model_dir: Path
     mock_pipeline: bool
@@ -41,12 +42,14 @@ class Settings:
 def get_settings() -> Settings:
     data_dir = Path(os.getenv("DATA_DIR", "./data"))
     database_url = os.getenv("DATABASE_URL", f"sqlite:///{data_dir / 'app.db'}")
+    seedvr2_repo_dir = Path(os.getenv("SEEDVR2_REPO_DIR", "/opt/seedvr"))
     seedvr2_model_dir = Path(os.getenv("SEEDVR2_MODEL_DIR", "/models/seedvr2"))
     default_browse_roots = os.pathsep.join([str(data_dir), str(seedvr2_model_dir.parent), "/external"])
     browse_roots = tuple(Path(path) for path in os.getenv("BROWSE_ROOTS", default_browse_roots).split(os.pathsep) if path)
     return Settings(
         data_dir=data_dir,
         database_url=database_url,
+        seedvr2_repo_dir=seedvr2_repo_dir,
         seedvr2_cli_path=os.getenv("SEEDVR2_CLI_PATH", "/opt/seedvr2/inference_cli.py"),
         seedvr2_model_dir=seedvr2_model_dir,
         mock_pipeline=_as_bool(os.getenv("MOCK_PIPELINE"), True),

@@ -7,6 +7,7 @@ services:
       DATA_DIR: ${DATA_DIR:-/data}
       DATABASE_URL: ${DATABASE_URL:-sqlite:////data/app.db}
       SEEDVR2_CLI_PATH: ${SEEDVR2_CLI_PATH:-/opt/seedvr2/inference_cli.py}
+      SEEDVR2_REPO_DIR: ${SEEDVR2_REPO_DIR:-/opt/seedvr}
       SEEDVR2_MODEL_DIR: ${SEEDVR2_MODEL_DIR:-/models/seedvr2}
       BROWSE_ROOTS: ${BROWSE_ROOTS:-/data:/models:/external}
       MOCK_PIPELINE: ${MOCK_PIPELINE:-true}
@@ -20,6 +21,7 @@ services:
     volumes:
       - ./data:/data
       - ./models:/models
+      - ./seedvr:/opt/seedvr
       - ./external:/external
     ports:
       - "8000:8000"
@@ -34,6 +36,7 @@ services:
       DATA_DIR: ${DATA_DIR:-/data}
       DATABASE_URL: ${DATABASE_URL:-sqlite:////data/app.db}
       SEEDVR2_CLI_PATH: ${SEEDVR2_CLI_PATH:-/opt/seedvr2/inference_cli.py}
+      SEEDVR2_REPO_DIR: ${SEEDVR2_REPO_DIR:-/opt/seedvr}
       SEEDVR2_MODEL_DIR: ${SEEDVR2_MODEL_DIR:-/models/seedvr2}
       BROWSE_ROOTS: ${BROWSE_ROOTS:-/data:/models:/external}
       MOCK_PIPELINE: ${MOCK_PIPELINE:-true}
@@ -46,6 +49,7 @@ services:
     volumes:
       - ./data:/data
       - ./models:/models
+      - ./seedvr:/opt/seedvr
       - ./external:/external
     depends_on:
       - backend

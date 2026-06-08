@@ -28,14 +28,15 @@ What is real:
 - NVIDIA stats collection when `nvidia-smi` is available
 - GPU-first defaults with NVIDIA NVENC selected automatically when visible
 - SeedVR2 model inventory and smoke-test endpoints
+- SeedVR2 model download status and background downloads from official ByteDance Hugging Face repositories
 - FFmpeg preprocessing and encode command builders
-- SeedVR2 CLI adapter and setup error path
+- SeedVR2 real-runner branch for FFmpeg preprocess, SeedVR2 upscale, and audio-preserving encode/mux when `MOCK_PIPELINE=false`
 
 What is mocked:
 
 - The worker currently simulates pipeline stages by default with `MOCK_PIPELINE=true`.
-- Real SeedVR2 inference is not claimed to work until the actual SeedVR2 repository/CLI is mounted and `SEEDVR2_CLI_PATH` points to it.
-- The model smoke test can run real inference only after SeedVR2 CLI and model files are mounted.
+- Real SeedVR2 inference still needs the actual ByteDance SeedVR repository mounted and the worker image/environment to include SeedVR dependencies such as PyTorch, torchrun, flash-attn, and apex.
+- The model smoke test can run real inference only after SeedVR2 entrypoints and model files are present.
 - VapourSynth/QTGMC is documented as optional and detected, but not fully wired into the v1 runner.
 
 ## Requirements
@@ -103,6 +104,12 @@ Models should be mounted or copied under:
 ./models
 ```
 
+The SeedVR repository should be mounted or cloned under:
+
+```text
+./seedvr
+```
+
 The GUI New Job page also has a file picker. Picked files are copied into `./data/input` before probing and queueing.
 
 The New Job file dialog can browse configured roots. Docker defaults are:
@@ -131,16 +138,26 @@ The default `.env.example` values are:
 
 ```env
 SEEDVR2_CLI_PATH=/opt/seedvr2/inference_cli.py
+SEEDVR2_REPO_DIR=/opt/seedvr
 SEEDVR2_MODEL_DIR=/models/seedvr2
 MOCK_PIPELINE=true
 ```
 
-To connect the real SeedVR2 CLI:
+The app can download official ByteDance model snapshots into `./models/seedvr2/3B` and `./models/seedvr2/7B` from:
 
-1. Mount or bake the SeedVR2 repository into the worker image/container.
-2. Set `SEEDVR2_CLI_PATH` to the real inference script.
-3. Put model files under `./models/seedvr2` or update `SEEDVR2_MODEL_DIR`.
-4. Set `MOCK_PIPELINE=false` once the real command path is executable.
+```text
+ByteDance-Seed/SeedVR2-3B
+ByteDance-Seed/SeedVR2-7B
+```
+
+The download controls are on the New Job page. The backend reports status at `GET /api/models/downloads` and starts a download with `POST /api/models/downloads`.
+
+To connect the real SeedVR2 runner:
+
+1. Clone or mount `https://github.com/ByteDance-Seed/SeedVR` into `./seedvr`.
+2. Use the New Job page to download models, or manually place model files under `./models/seedvr2`.
+3. Build a worker image/environment with the SeedVR Python dependencies.
+4. Set `MOCK_PIPELINE=false` once `torchrun`, SeedVR entrypoints, GPU access, and models are ready.
 
 The adapter is in `backend/app/pipeline/seedvr2.py`.
 
@@ -185,6 +202,8 @@ POST   /api/files/input/upload
 GET    /api/files/roots
 GET    /api/files/browse
 GET    /api/models
+GET    /api/models/downloads
+POST   /api/models/downloads
 POST   /api/models/test
 GET    /api/jobs
 POST   /api/jobs
@@ -262,6 +281,8 @@ Covered areas:
 - performance stats aggregation
 - audio/output container command construction
 - model readiness reporting
+- model download status
+- real-pipeline branch orchestration
 
 ## Troubleshooting
 
@@ -269,19 +290,18 @@ Covered areas:
 - GPU is unavailable in the app: confirm `nvidia-smi` works on Windows and in a Docker CUDA container.
 - `/api/probe` fails: confirm the file is inside `./data/input` and FFprobe supports the format.
 - Jobs remain queued: confirm the `worker` service is running, or set `RUN_IN_PROCESS_WORKER=true` for local backend-only development.
-- SeedVR2 setup error: keep `MOCK_PIPELINE=true` until the real SeedVR2 CLI is mounted and executable.
+- SeedVR2 setup error: keep `MOCK_PIPELINE=true` until the real SeedVR repo is mounted, dependencies are installed, `torchrun` is available, and model files are present.
 
 ## Known Limitations
 
 - The default runner simulates processing stages.
-- Real SeedVR2 command execution needs final validation against the actual repository interface.
+- Real SeedVR2 command execution depends on a SeedVR-capable worker image; the base worker image does not install PyTorch/flash-attn/apex.
 - QTGMC/VapourSynth support is a planned advanced path.
 - Uploads are intentionally not stored in the database; the app works from mounted folders.
 
 ## Next Recommended Steps
 
-1. Mount the real SeedVR2 repository and validate the adapter command.
-2. Replace the mock worker stage execution with real FFmpeg intermediate generation.
+1. Build a CUDA/PyTorch worker image that satisfies ByteDance SeedVR dependencies.
+2. Validate real SeedVR2 command execution on a short clip.
 3. Add SeedVR2 progress parser support for live upscale stage progress.
-4. Wire final encode/mux execution and audio copy validation.
-5. Add frontend affordances for opening output paths on Windows/WSL.
+4. Add frontend affordances for opening output paths on Windows/WSL.

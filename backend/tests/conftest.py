@@ -19,6 +19,7 @@ def settings(tmp_path: Path) -> Settings:
     return Settings(
         data_dir=data_dir,
         database_url=f"sqlite:///{data_dir / 'app.db'}",
+        seedvr2_repo_dir=tmp_path / "seedvr",
         seedvr2_cli_path="/opt/seedvr2/inference_cli.py",
         seedvr2_model_dir=tmp_path / "models",
         mock_pipeline=True,

@@ -1,9 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 
-import { ApiService, BrowseResponse, BrowseItem, BrowseRoot, InputFile, ModelStatus, ModelTestResult, VideoMetadata } from '../services/api.service';
+import { ApiService, BrowseResponse, BrowseItem, BrowseRoot, InputFile, ModelDownloadStatus, ModelStatus, ModelTestResult, VideoMetadata } from '../services/api.service';
 
 @Component({
   selector: 'app-new-job',
@@ -12,14 +12,16 @@ import { ApiService, BrowseResponse, BrowseItem, BrowseRoot, InputFile, ModelSta
   templateUrl: './new-job.component.html',
   styleUrls: ['./new-job.component.css']
 })
-export class NewJobComponent implements OnInit {
+export class NewJobComponent implements OnInit, OnDestroy {
   inputFiles: InputFile[] = [];
   metadata?: VideoMetadata;
   modelStatus?: ModelStatus;
   modelTest?: ModelTestResult;
+  modelDownloads: ModelDownloadStatus[] = [];
   uploadMessage = '';
   probeMessage = '';
   modelTestRunning = false;
+  private downloadPoll?: ReturnType<typeof setInterval>;
 
   showBrowseModal = false;
   browseTarget: 'source' | 'destination' = 'source';
@@ -64,6 +66,14 @@ export class NewJobComponent implements OnInit {
     this.loadInputs();
     this.loadModelStatus();
     this.loadBrowseRoots();
+    this.loadModelDownloads();
+    this.downloadPoll = setInterval(() => this.loadModelDownloads(), 4000);
+  }
+
+  ngOnDestroy(): void {
+    if (this.downloadPoll) {
+      clearInterval(this.downloadPoll);
+    }
   }
 
   get selectedInput(): InputFile | undefined {
@@ -112,6 +122,36 @@ export class NewJobComponent implements OnInit {
 
   loadModelStatus(): void {
     this.api.models().subscribe((status) => (this.modelStatus = status));
+  }
+
+  loadModelDownloads(): void {
+    this.api.modelDownloads().subscribe((response) => (this.modelDownloads = response.downloads));
+  }
+
+  downloadFor(model: string): ModelDownloadStatus | undefined {
+    return this.modelDownloads.find((download) => download.model === model);
+  }
+
+  downloadPercent(download: ModelDownloadStatus | undefined): number {
+    if (!download?.estimated_bytes) {
+      return 0;
+    }
+    return Math.min(100, Math.round((download.bytes_downloaded / download.estimated_bytes) * 100));
+  }
+
+  isDownloading(model: string): boolean {
+    const status = this.downloadFor(model)?.status;
+    return status === 'queued' || status === 'running';
+  }
+
+  startModelDownload(model: string): void {
+    this.api.startModelDownload(model).subscribe({
+      next: () => {
+        this.loadModelDownloads();
+        this.loadModelStatus();
+      },
+      error: () => this.loadModelDownloads()
+    });
   }
 
   loadBrowseRoots(): void {

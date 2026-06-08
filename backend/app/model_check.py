@@ -47,15 +47,17 @@ def _directory_summary(path: Path) -> dict[str, Any]:
 def inspect_seedvr2_environment(settings: Settings) -> dict[str, Any]:
     gpu = read_gpu_snapshot().as_dict()
     cli_path = Path(settings.seedvr2_cli_path)
+    entrypoints = _entrypoints(settings)
+    cli_exists = cli_path.exists() or any(item["exists"] for item in entrypoints)
     models = [_model_summary(settings, "3B"), _model_summary(settings, "7B")]
     return {
-        "ok": bool(gpu.get("available")) and cli_path.exists() and any(model["ready"] for model in models),
+        "ok": bool(gpu.get("available")) and cli_exists and any(model["ready"] for model in models),
         "gpu": gpu,
-        "cli": {"path": str(cli_path), "exists": cli_path.exists()},
+        "cli": {"path": str(cli_path), "exists": cli_exists, "entrypoints": entrypoints, "repo_dir": str(settings.seedvr2_repo_dir)},
         "model_dir": str(settings.seedvr2_model_dir),
         "models": models,
         "mock_pipeline": settings.mock_pipeline,
-        "message": _readiness_message(gpu, cli_path.exists(), models),
+        "message": _readiness_message(gpu, cli_exists, models),
     }
 
 
@@ -73,6 +75,21 @@ def _readiness_message(gpu: dict[str, Any], cli_exists: bool, models: list[dict[
     if not any(model["ready"] for model in models):
         return "No SeedVR2 model files were found under the configured model directory."
     return "GPU, CLI, and at least one model directory look ready."
+
+
+def _entrypoints(settings: Settings) -> list[dict[str, Any]]:
+    return [
+        {
+            "model": "3B",
+            "path": str(settings.seedvr2_repo_dir / "projects" / "inference_seedvr2_3b.py"),
+            "exists": (settings.seedvr2_repo_dir / "projects" / "inference_seedvr2_3b.py").exists(),
+        },
+        {
+            "model": "7B",
+            "path": str(settings.seedvr2_repo_dir / "projects" / "inference_seedvr2_7b.py"),
+            "exists": (settings.seedvr2_repo_dir / "projects" / "inference_seedvr2_7b.py").exists(),
+        },
+    ]
 
 
 def prepare_model_test_clip(settings: Settings) -> Path:
@@ -106,7 +123,7 @@ def test_seedvr2_model(settings: Settings, request: ModelTestRequest) -> dict[st
     gpu = read_gpu_snapshot().as_dict()
     model_path = _model_path(settings, request.model, request.custom_model_path)
     model_summary = _directory_summary(model_path)
-    adapter = SeedVR2Adapter(settings.seedvr2_cli_path, settings.seedvr2_model_dir)
+    adapter = SeedVR2Adapter(settings.seedvr2_cli_path, settings.seedvr2_model_dir, repo_dir=settings.seedvr2_repo_dir)
     work_dir = settings.data_dir / "work" / "model-check"
     output_path = work_dir / "seedvr2-smoke-output.mkv"
     log_path = settings.data_dir / "logs" / "model-check.log"
@@ -125,7 +142,7 @@ def test_seedvr2_model(settings: Settings, request: ModelTestRequest) -> dict[st
     command: list[str] | None = None
     try:
         input_path = prepare_model_test_clip(settings)
-        command = adapter.build_command(input_path, output_path, options)
+        command = adapter.build_command(input_path, output_path, options, target_width=128, target_height=128)
     except SeedVR2Unavailable as exc:
         return _model_test_result(False, "cli_missing", str(exc), gpu, model_summary, input_path, command, False, log_path)
     except Exception as exc:

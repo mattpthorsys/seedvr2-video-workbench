@@ -14,7 +14,8 @@ from .file_browser import browse_directory, browse_roots, resolve_managed_path
 from .gpu import read_gpu_snapshot
 from .jobs import cancel_job, create_job, get_job, get_stage_stats, list_jobs, read_logs, run_job
 from .model_check import inspect_seedvr2_environment, test_seedvr2_model
-from .schemas import JobCreate, ModelTestRequest, ProbeRequest
+from .model_downloads import download_status, model_download_options, start_model_download
+from .schemas import JobCreate, ModelDownloadRequest, ModelTestRequest, ProbeRequest
 from .video_probe import list_input_files, run_ffprobe, save_uploaded_video
 
 
@@ -63,6 +64,7 @@ def health() -> dict[str, Any]:
 def api_settings() -> dict[str, Any]:
     return {
         "data_dir": str(settings.data_dir),
+        "seedvr2_repo_dir": str(settings.seedvr2_repo_dir),
         "seedvr2_cli_path": settings.seedvr2_cli_path,
         "seedvr2_model_dir": str(settings.seedvr2_model_dir),
         "mock_pipeline": settings.mock_pipeline,
@@ -113,6 +115,19 @@ def browse_files(path: str = "", root_id: str | None = None) -> dict[str, Any]:
 @app.get("/api/models")
 def models() -> dict[str, Any]:
     return inspect_seedvr2_environment(settings)
+
+
+@app.get("/api/models/downloads")
+def model_downloads() -> dict[str, Any]:
+    return {"options": model_download_options(), "downloads": download_status(settings)}
+
+
+@app.post("/api/models/downloads")
+def start_download(request: ModelDownloadRequest) -> dict[str, Any]:
+    try:
+        return start_model_download(settings, request.model)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.post("/api/models/test")

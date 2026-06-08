@@ -22,6 +22,7 @@ data/output/*
 data/work/*
 data/logs/*
 models/*
+seedvr/*
 external/*
 
 .DS_Store
