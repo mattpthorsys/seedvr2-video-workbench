@@ -1,0 +1,50 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      DATA_DIR: ${DATA_DIR:-/data}
+      DATABASE_URL: ${DATABASE_URL:-sqlite:////data/app.db}
+      SEEDVR2_CLI_PATH: ${SEEDVR2_CLI_PATH:-/opt/seedvr2/inference_cli.py}
+      SEEDVR2_MODEL_DIR: ${SEEDVR2_MODEL_DIR:-/models/seedvr2}
+      MOCK_PIPELINE: ${MOCK_PIPELINE:-true}
+      RUN_IN_PROCESS_WORKER: ${RUN_IN_PROCESS_WORKER:-false}
+      FFMPEG_PATH: ${FFMPEG_PATH:-ffmpeg}
+      FFPROBE_PATH: ${FFPROBE_PATH:-ffprobe}
+    volumes:
+      - ./data:/data
+      - ./models:/models
+    ports:
+      - "8000:8000"
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+  worker:
+    build:
+      context: .
+      dockerfile: worker/Dockerfile
+    environment:
+      DATA_DIR: ${DATA_DIR:-/data}
+      DATABASE_URL: ${DATABASE_URL:-sqlite:////data/app.db}
+      SEEDVR2_CLI_PATH: ${SEEDVR2_CLI_PATH:-/opt/seedvr2/inference_cli.py}
+      SEEDVR2_MODEL_DIR: ${SEEDVR2_MODEL_DIR:-/models/seedvr2}
+      MOCK_PIPELINE: ${MOCK_PIPELINE:-true}
+      FFMPEG_PATH: ${FFMPEG_PATH:-ffmpeg}
+      FFPROBE_PATH: ${FFPROBE_PATH:-ffprobe}
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility,video
+    volumes:
+      - ./data:/data
+      - ./models:/models
+    depends_on:
+      - backend
+    gpus: all
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "4200:80"
+    depends_on:
+      - backend

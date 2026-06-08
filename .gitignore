@@ -1,0 +1,45 @@
+# Local environment
+.env
+.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# Node / Angular
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+npm-debug.log*
+
+# Runtime data
+*.db
+*.sqlite
+*.sqlite3
+*.log
+data/input/*
+data/output/*
+data/work/*
+data/logs/*
+!data/input/.gitkeep
+!data/output/.gitkeep
+!data/work/.gitkeep
+!data/logs/.gitkeep
+models/*
+!models/.gitkeep
+
+# Local Codex/projectless workspace folders
+outputs/
+work/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+

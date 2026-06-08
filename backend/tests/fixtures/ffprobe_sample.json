@@ -1,0 +1,28 @@
+{
+  "streams": [
+    {
+      "index": 0,
+      "codec_name": "mpeg2video",
+      "codec_type": "video",
+      "width": 720,
+      "height": 480,
+      "field_order": "tt",
+      "avg_frame_rate": "30000/1001",
+      "duration": "60.060000"
+    },
+    {
+      "index": 1,
+      "codec_name": "ac3",
+      "codec_type": "audio",
+      "channels": 2,
+      "tags": {
+        "language": "eng"
+      }
+    }
+  ],
+  "format": {
+    "filename": "/data/input/sample.vob",
+    "duration": "60.060000"
+  }
+}
+
