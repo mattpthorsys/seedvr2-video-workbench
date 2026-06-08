@@ -40,7 +40,7 @@ def read_gpu_snapshot() -> GpuSnapshot:
     if shutil.which("nvidia-smi") is None:
         return GpuSnapshot(available=False)
     query = (
-        "name,driver_version,cuda_version,memory.used,memory.total,"
+        "name,driver_version,memory.used,memory.total,"
         "utilization.gpu,temperature.gpu"
     )
     result = subprocess.run(
@@ -54,16 +54,34 @@ def read_gpu_snapshot() -> GpuSnapshot:
         return GpuSnapshot(available=False)
     first = result.stdout.strip().splitlines()[0]
     parts = [part.strip() for part in first.split(",")]
-    if len(parts) < 7:
+    if len(parts) < 6:
         return GpuSnapshot(available=False)
+
+    cuda_version = None
+    try:
+        raw_result = subprocess.run(
+            ["nvidia-smi"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+        if raw_result.returncode == 0:
+            import re
+            m = re.search(r"CUDA Version:\s*([\d\.]+)", raw_result.stdout)
+            if m:
+                cuda_version = m.group(1)
+    except Exception:
+        pass
+
     return GpuSnapshot(
         name=parts[0],
         driver_version=parts[1],
-        cuda_version=parts[2],
-        memory_used_mb=_to_float(parts[3]),
-        memory_total_mb=_to_float(parts[4]),
-        utilisation_percent=_to_float(parts[5]),
-        temperature_c=_to_float(parts[6]),
+        cuda_version=cuda_version,
+        memory_used_mb=_to_float(parts[2]),
+        memory_total_mb=_to_float(parts[3]),
+        utilisation_percent=_to_float(parts[4]),
+        temperature_c=_to_float(parts[5]),
         available=True,
     )
 
