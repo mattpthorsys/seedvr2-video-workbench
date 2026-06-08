@@ -65,12 +65,14 @@ class EncodeOptions(BaseModel):
 
 class JobCreate(BaseModel):
     input_path: str
+    output_path: str | None = None
     preset: str = "Progressive"
     target: TargetOptions = Field(default_factory=TargetOptions)
     preprocessing: PreprocessOptions = Field(default_factory=PreprocessOptions)
     seedvr2: SeedVR2Options = Field(default_factory=SeedVR2Options)
     encode: EncodeOptions = Field(default_factory=EncodeOptions)
     source_metadata: VideoMetadata | None = None
+
 
 
 class JobRead(BaseModel):

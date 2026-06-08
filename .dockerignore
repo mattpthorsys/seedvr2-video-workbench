@@ -14,6 +14,7 @@ work
 frontend/node_modules
 frontend/dist
 frontend/.angular
+frontend/.npm-cache
 npm-debug.log*
 
 data/input/*
@@ -21,7 +22,7 @@ data/output/*
 data/work/*
 data/logs/*
 models/*
+external/*
 
 .DS_Store
 Thumbs.db
-

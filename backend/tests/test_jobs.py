@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from app.jobs import create_job, get_stage_stats, run_job
 
 
@@ -90,3 +92,30 @@ def test_job_uses_selected_output_container(conn, settings):
     )
 
     assert job["output_path"].endswith("sample_restored.mp4")
+
+
+def test_job_uses_selected_output_path(conn, settings):
+    job = create_job(
+        conn,
+        settings,
+        {
+            "input_path": "source.mkv",
+            "output_path": "output/custom/source_done.mov",
+            "source_metadata": {
+                "filename": "source.mkv",
+                "duration_seconds": 1.0,
+                "frame_count_estimate": 12,
+                "width": 640,
+                "height": 360,
+                "frame_rate": 24.0,
+                "scan_type": "progressive",
+                "audio_streams": [],
+                "video_codec": "h264",
+            },
+            "encode": {"container": "mov", "hardware": "cpu", "codec": "h264"},
+        },
+    )
+
+    expected = (settings.data_dir / "output" / "custom" / "source_done.mov").resolve()
+    assert Path(job["output_path"]) == expected
+    assert expected.parent.exists()

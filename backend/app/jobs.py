@@ -9,11 +9,12 @@ from typing import Any, Mapping
 from .config import Settings
 from .db import row_to_dict, utc_now
 from .eta import estimate_job, smooth_eta
+from .file_browser import resolve_managed_path
 from .gpu import read_gpu_snapshot
 from .models import PIPELINE_STAGES, TERMINAL_JOB_STATUSES
 from .pipeline.stats import update_performance_profiles
 from .schemas import JobCreate
-from .video_probe import run_ffprobe, safe_data_path
+from .video_probe import run_ffprobe
 
 
 TARGET_HEIGHTS = {"720p": 720, "1080p": 1080, "1440p": 1440, "4k": 2160}
@@ -64,9 +65,7 @@ def _metadata_values(request: Mapping[str, Any]) -> dict[str, Any]:
 def _ensure_metadata(settings: Settings, data: dict[str, Any]) -> None:
     if data.get("source_metadata"):
         return
-    path = safe_data_path(settings.data_dir, data["input_path"], "input")
-    if not path.exists():
-        raise ValueError(f"Input file does not exist: {path}")
+    path = resolve_managed_path(settings, data["input_path"], "input", must_exist=True)
     metadata = run_ffprobe(path, settings.ffprobe_path)
     data["source_metadata"] = metadata.model_dump() if hasattr(metadata, "model_dump") else metadata.dict()
 
@@ -115,6 +114,14 @@ def create_job(conn: sqlite3.Connection, settings: Settings, request: JobCreate 
     }
     estimate = estimate_job(conn, estimate_context)
 
+    req_output_path = data.get("output_path")
+    if req_output_path:
+        out_path_path = resolve_managed_path(settings, req_output_path, "output", must_exist=False)
+        out_path_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path = str(out_path_path)
+    else:
+        out_path = _output_path(settings, data["input_path"], encode.get("container"))
+
     cursor = conn.execute(
         """
         INSERT INTO jobs (
@@ -127,7 +134,7 @@ def create_job(conn: sqlite3.Connection, settings: Settings, request: JobCreate 
         """,
         (
             data["input_path"],
-            _output_path(settings, data["input_path"], encode.get("container")),
+            out_path,
             now,
             now,
             metadata["source_width"],

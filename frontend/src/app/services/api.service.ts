@@ -9,6 +9,34 @@ export interface InputFile {
   size_bytes: number;
 }
 
+export interface BrowseItem {
+  name: string;
+  root_id: string;
+  relative_path: string;
+  select_path: string;
+  size_bytes?: number;
+  is_video?: boolean;
+}
+
+export interface BrowseRoot {
+  id: string;
+  label: string;
+  path: string;
+  exists: boolean;
+}
+
+export interface BrowseResponse {
+  root_id: string;
+  root_label: string;
+  root_path: string;
+  current_path: string;
+  current_select_path: string;
+  parent_path: string | null;
+  roots: BrowseRoot[];
+  folders: BrowseItem[];
+  files: BrowseItem[];
+}
+
 export interface VideoMetadata {
   filename: string;
   duration_seconds?: number;
@@ -137,5 +165,13 @@ export class ApiService {
 
   performanceProfiles(): Observable<Array<Record<string, unknown>>> {
     return this.http.get<Array<Record<string, unknown>>>('/api/stats/performance-profiles');
+  }
+
+  browseRoots(): Observable<BrowseRoot[]> {
+    return this.http.get<BrowseRoot[]>('/api/files/roots');
+  }
+
+  browseFiles(rootId: string, path: string): Observable<BrowseResponse> {
+    return this.http.get<BrowseResponse>(`/api/files/browse?root_id=${encodeURIComponent(rootId)}&path=${encodeURIComponent(path)}`);
   }
 }

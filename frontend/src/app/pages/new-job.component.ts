@@ -3,7 +3,7 @@ import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 
-import { ApiService, InputFile, ModelStatus, ModelTestResult, VideoMetadata } from '../services/api.service';
+import { ApiService, BrowseResponse, BrowseItem, BrowseRoot, InputFile, ModelStatus, ModelTestResult, VideoMetadata } from '../services/api.service';
 
 @Component({
   selector: 'app-new-job',
@@ -20,37 +20,28 @@ export class NewJobComponent implements OnInit {
   uploadMessage = '';
   probeMessage = '';
   modelTestRunning = false;
+
+  showBrowseModal = false;
+  browseTarget: 'source' | 'destination' = 'source';
+  browseRoots: BrowseRoot[] = [];
+  currentRootId = '0';
+  currentBrowsePath = '';
+  browseData?: BrowseResponse;
+  browseSearchQuery = '';
+  newFilename = '';
+
   readonly acceptedVideoTypes = [
-    '.3g2',
-    '.3gp',
-    '.asf',
-    '.avi',
-    '.divx',
-    '.dv',
-    '.f4v',
-    '.flv',
-    '.m2ts',
-    '.m2v',
-    '.m4v',
-    '.mkv',
-    '.mov',
-    '.mp4',
-    '.mpeg',
-    '.mpg',
-    '.mts',
-    '.mxf',
-    '.ogm',
-    '.ogv',
-    '.rm',
-    '.rmvb',
-    '.ts',
-    '.vob',
-    '.webm',
-    '.wmv'
+    '.3g2', '.3gp', '.asf', '.avi', '.divx', '.dv', '.f4v', '.flv',
+    '.m2ts', '.m2v', '.m4v', '.mkv', '.mov', '.mp4', '.mpeg', '.mpg',
+    '.mts', '.mxf', '.ogm', '.ogv', '.rm', '.rmvb', '.ts', '.vob',
+    '.webm', '.wmv'
   ].join(',');
+
   presets = ['Progressive', 'Interlaced video', 'Telecined/DVD', 'PAL DVD/TV', 'Heavy compression', 'Soft low-resolution source', 'Custom'];
+  
   form = {
     input_path: '',
+    output_path: '',
     preset: 'Progressive',
     target: { mode: '1080p', width: undefined as number | undefined, height: undefined as number | undefined },
     preprocessing: { deinterlace: 'none', inverse_telecine: 'off', denoise: 'off', deblock: 'off' },
@@ -72,6 +63,7 @@ export class NewJobComponent implements OnInit {
   ngOnInit(): void {
     this.loadInputs();
     this.loadModelStatus();
+    this.loadBrowseRoots();
   }
 
   get selectedInput(): InputFile | undefined {
@@ -87,12 +79,46 @@ export class NewJobComponent implements OnInit {
     return !!this.form.input_path;
   }
 
+  get filteredFolders(): BrowseItem[] {
+    if (!this.browseData?.folders) return [];
+    return this.browseData.folders.filter(f => f.name.toLowerCase().includes(this.browseSearchQuery.toLowerCase()));
+  }
+
+  get filteredFiles(): BrowseItem[] {
+    if (!this.browseData?.files) return [];
+    return this.browseData.files.filter(f => {
+      const matchSearch = f.name.toLowerCase().includes(this.browseSearchQuery.toLowerCase());
+      if (this.browseTarget === 'source') {
+        return matchSearch && !!f.is_video;
+      }
+      return matchSearch;
+    });
+  }
+
+  get browseCrumbs(): Array<{ label: string; path: string }> {
+    if (!this.currentBrowsePath) {
+      return [];
+    }
+    const parts = this.currentBrowsePath.split('/').filter(Boolean);
+    return parts.map((part, index) => ({
+      label: part,
+      path: parts.slice(0, index + 1).join('/')
+    }));
+  }
+
   loadInputs(): void {
     this.api.inputFiles().subscribe((files) => (this.inputFiles = files));
   }
 
   loadModelStatus(): void {
     this.api.models().subscribe((status) => (this.modelStatus = status));
+  }
+
+  loadBrowseRoots(): void {
+    this.api.browseRoots().subscribe((roots) => {
+      this.browseRoots = roots;
+      this.currentRootId = roots.find((root) => root.exists)?.id || roots[0]?.id || '0';
+    });
   }
 
   uploadSelected(event: Event): void {
@@ -109,6 +135,7 @@ export class NewJobComponent implements OnInit {
         this.metadata = undefined;
         this.loadInputs();
         this.probe();
+        this.updateDefaultOutputPath(saved.relative_path);
       },
       error: (error) => {
         this.uploadMessage = error?.error?.detail || 'Upload failed.';
@@ -169,5 +196,79 @@ export class NewJobComponent implements OnInit {
   submit(): void {
     const payload = { ...this.form, source_metadata: this.metadata };
     this.api.createJob(payload).subscribe((job) => this.router.navigate(['/jobs', job.id]));
+  }
+
+  openBrowse(target: 'source' | 'destination'): void {
+    this.browseTarget = target;
+    this.showBrowseModal = true;
+    this.browseSearchQuery = '';
+
+    const dataRoot = this.browseRoots.find((root) => root.label === 'Data' && root.exists) || this.browseRoots.find((root) => root.exists) || this.browseRoots[0];
+    this.currentRootId = dataRoot?.id || '0';
+    let defaultStart = '';
+    if (target === 'source') {
+      defaultStart = 'input';
+    } else {
+      defaultStart = 'output';
+      if (this.form.input_path) {
+        const base = this.form.input_path.split('/').pop() || 'video.mp4';
+        const dotIndex = base.lastIndexOf('.');
+        const stem = dotIndex !== -1 ? base.substring(0, dotIndex) : base;
+        this.newFilename = `${stem}_restored`;
+      } else {
+        this.newFilename = 'restored_video';
+      }
+    }
+    this.loadBrowsePath(defaultStart, this.currentRootId);
+  }
+
+  loadBrowsePath(path: string, rootId = this.currentRootId): void {
+    this.currentRootId = rootId;
+    this.currentBrowsePath = path;
+    this.api.browseFiles(rootId, path).subscribe({
+      next: (resp) => {
+        this.browseData = resp;
+        this.currentRootId = resp.root_id;
+        this.currentBrowsePath = resp.current_path;
+      },
+      error: () => {
+        if (path !== '') {
+          this.loadBrowsePath('');
+        }
+      }
+    });
+  }
+
+  navigateBrowse(dirPath: string): void {
+    this.loadBrowsePath(dirPath);
+  }
+
+  selectFile(item: BrowseItem): void {
+    if (this.browseTarget !== 'source') {
+      return;
+    }
+    this.form.input_path = item.select_path;
+    this.showBrowseModal = false;
+    this.metadata = undefined;
+    this.probe();
+    this.updateDefaultOutputPath(item.select_path);
+  }
+
+  confirmDestinationBrowse(): void {
+    if (this.browseTarget === 'destination') {
+      const ext = this.form.encode.container || 'mkv';
+      const selectedDir = this.browseData?.current_select_path || this.currentBrowsePath || 'output';
+      const separator = selectedDir.endsWith('/') || selectedDir.endsWith('\\') ? '' : '/';
+      this.form.output_path = `${selectedDir}${separator}${this.newFilename}.${ext}`;
+      this.showBrowseModal = false;
+    }
+  }
+
+  updateDefaultOutputPath(inputPath: string): void {
+    const base = inputPath.split('/').pop() || 'video.mp4';
+    const dotIndex = base.lastIndexOf('.');
+    const stem = dotIndex !== -1 ? base.substring(0, dotIndex) : base;
+    const ext = this.form.encode.container || 'mkv';
+    this.form.output_path = `output/${stem}_restored.${ext}`;
   }
 }

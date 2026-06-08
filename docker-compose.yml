@@ -8,6 +8,7 @@ services:
       DATABASE_URL: ${DATABASE_URL:-sqlite:////data/app.db}
       SEEDVR2_CLI_PATH: ${SEEDVR2_CLI_PATH:-/opt/seedvr2/inference_cli.py}
       SEEDVR2_MODEL_DIR: ${SEEDVR2_MODEL_DIR:-/models/seedvr2}
+      BROWSE_ROOTS: ${BROWSE_ROOTS:-/data:/models:/external}
       MOCK_PIPELINE: ${MOCK_PIPELINE:-true}
       RUN_IN_PROCESS_WORKER: ${RUN_IN_PROCESS_WORKER:-false}
       PREFER_GPU: ${PREFER_GPU:-true}
@@ -19,6 +20,7 @@ services:
     volumes:
       - ./data:/data
       - ./models:/models
+      - ./external:/external
     ports:
       - "8000:8000"
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000
@@ -33,6 +35,7 @@ services:
       DATABASE_URL: ${DATABASE_URL:-sqlite:////data/app.db}
       SEEDVR2_CLI_PATH: ${SEEDVR2_CLI_PATH:-/opt/seedvr2/inference_cli.py}
       SEEDVR2_MODEL_DIR: ${SEEDVR2_MODEL_DIR:-/models/seedvr2}
+      BROWSE_ROOTS: ${BROWSE_ROOTS:-/data:/models:/external}
       MOCK_PIPELINE: ${MOCK_PIPELINE:-true}
       PREFER_GPU: ${PREFER_GPU:-true}
       REQUIRE_GPU_FOR_REAL_PIPELINE: ${REQUIRE_GPU_FOR_REAL_PIPELINE:-true}
@@ -43,6 +46,7 @@ services:
     volumes:
       - ./data:/data
       - ./models:/models
+      - ./external:/external
     depends_on:
       - backend
     gpus: all

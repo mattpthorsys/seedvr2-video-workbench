@@ -27,6 +27,7 @@ def settings(tmp_path: Path) -> Settings:
         ffprobe_path="ffprobe",
         prefer_gpu=False,
         require_gpu_for_real_pipeline=False,
+        browse_roots=(data_dir, tmp_path / "models"),
     )
 
 

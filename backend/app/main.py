@@ -10,11 +10,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from .config import get_settings
 from .db import connect, init_db, row_to_dict
 from .eta import estimate_job
+from .file_browser import browse_directory, browse_roots, resolve_managed_path
 from .gpu import read_gpu_snapshot
 from .jobs import cancel_job, create_job, get_job, get_stage_stats, list_jobs, read_logs, run_job
 from .model_check import inspect_seedvr2_environment, test_seedvr2_model
 from .schemas import JobCreate, ModelTestRequest, ProbeRequest
-from .video_probe import list_input_files, run_ffprobe, safe_data_path, save_uploaded_video
+from .video_probe import list_input_files, run_ffprobe, save_uploaded_video
+
 
 settings = get_settings()
 app = FastAPI(title="SeedVR2 Video Workbench API", version="0.1.0")
@@ -75,7 +77,7 @@ def api_settings() -> dict[str, Any]:
 @app.post("/api/probe")
 def probe(request: ProbeRequest) -> dict[str, Any]:
     try:
-        path = safe_data_path(settings.data_dir, request.input_path, "input")
+        path = resolve_managed_path(settings, request.input_path, "input", must_exist=True)
         metadata = run_ffprobe(path, settings.ffprobe_path)
         return _dump_model(metadata)
     except Exception as exc:
@@ -91,6 +93,19 @@ def input_files() -> list[dict[str, Any]]:
 def upload_input_file(file: UploadFile = File(...)) -> dict[str, Any]:
     try:
         return save_uploaded_video(settings.data_dir, file.filename or "", file.file)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/files/roots")
+def file_roots() -> list[dict[str, Any]]:
+    return browse_roots(settings)
+
+
+@app.get("/api/files/browse")
+def browse_files(path: str = "", root_id: str | None = None) -> dict[str, Any]:
+    try:
+        return browse_directory(settings, root_id, path)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

@@ -7,82 +7,88 @@
 </section>
 
 <section class="readiness-strip">
-  <div class="readiness-card" [class.good]="modelStatus?.gpu?.['available']" [class.bad]="modelStatus && !modelStatus.gpu?.['available']">
-    <span>GPU</span>
+  <div class="readiness-card" [class.good]="modelStatus?.gpu?.['available']" [class.bad]="modelStatus && !modelStatus.gpu['available']">
+    <span>GPU Acceleration</span>
     <strong>{{ gpuName }}</strong>
-    <small>{{ modelStatus?.gpu?.['available'] ? 'Visible to container' : 'Waiting for nvidia-smi' }}</small>
+    <small>{{ modelStatus?.gpu?.['available'] ? 'Visible and active' : 'Unavailable (Check CUDA/Drivers)' }}</small>
   </div>
-  <div class="readiness-card" [class.good]="modelStatus?.cli?.exists" [class.bad]="modelStatus && !modelStatus.cli?.exists">
+  <div class="readiness-card" [class.good]="modelStatus?.cli?.exists" [class.bad]="modelStatus && !modelStatus.cli.exists">
     <span>SeedVR2 CLI</span>
-    <strong>{{ modelStatus?.cli?.exists ? 'Configured' : 'Missing' }}</strong>
-    <small>{{ modelStatus?.cli?.path || '-' }}</small>
+    <strong>{{ modelStatus?.cli?.exists ? 'Configured & Ready' : 'Incomplete' }}</strong>
+    <small>{{ modelStatus?.cli?.path || 'Missing CLI script' }}</small>
   </div>
   <div class="readiness-card" [class.good]="modelStatus?.ok" [class.bad]="modelStatus && !modelStatus.ok">
-    <span>Model Readiness</span>
-    <strong>{{ modelStatus?.ok ? 'Ready' : 'Needs setup' }}</strong>
-    <small>{{ modelStatus?.message || 'Checking model directory...' }}</small>
+    <span>Model Status</span>
+    <strong>{{ modelStatus?.ok ? 'Ready' : 'Needs Mount' }}</strong>
+    <small>{{ modelStatus?.message || 'Inspecting directories...' }}</small>
   </div>
 </section>
 
 <section class="job-workspace">
   <div class="left-rail">
     <div class="panel source-panel">
-      <div class="panel-title">
-        <h2>Source Intake</h2>
-        <button type="button" (click)="loadInputs()">Refresh</button>
+      <h2>Source & Destination</h2>
+
+      <div class="path-picker-group">
+        <label>
+          Source Video File
+          <div class="input-with-action">
+            <input type="text" [(ngModel)]="form.input_path" placeholder="Select a video file..." readonly>
+            <button type="button" (click)="openBrowse('source')">Browse...</button>
+          </div>
+        </label>
       </div>
 
-      <label class="file-picker">
-        <input type="file" [accept]="acceptedVideoTypes" (change)="uploadSelected($event)">
-        <span>Choose video file</span>
-        <small>MP4, MKV, MOV, AVI, VOB, TS, M2TS, MXF, WebM, WMV and other common containers</small>
-      </label>
-      <p class="inline-message" *ngIf="uploadMessage">{{ uploadMessage }}</p>
-
-      <label>
-        Mounted input
-        <select [(ngModel)]="form.input_path" name="input_path" (change)="metadata = undefined; probeMessage = ''">
-          <option value="">Select from /data/input</option>
-          <option *ngFor="let file of inputFiles" [value]="file.relative_path">{{ file.relative_path }}</option>
-        </select>
-      </label>
-
-      <div class="source-summary" *ngIf="selectedInput">
-        <div><span>Name</span><strong>{{ selectedInput.name }}</strong></div>
-        <div><span>Size</span><strong>{{ selectedInput.size_bytes | number }} bytes</strong></div>
+      <div class="path-picker-group">
+        <label>
+          Restored Output Path
+          <div class="input-with-action">
+            <input type="text" [(ngModel)]="form.output_path" placeholder="Select output location..." readonly>
+            <button type="button" (click)="openBrowse('destination')">Browse...</button>
+          </div>
+        </label>
       </div>
 
-      <div class="button-row">
-        <button type="button" (click)="probe()" [disabled]="!form.input_path">Probe & Prepare</button>
+      <div class="upload-area">
+        <label class="file-picker">
+          <input type="file" [accept]="acceptedVideoTypes" (change)="uploadSelected($event)">
+          <span>Drag video file here or click to upload</span>
+          <small>Common formats: MP4, MKV, MOV, AVI, TS, WebM</small>
+        </label>
+        <p class="inline-message upload" *ngIf="uploadMessage">{{ uploadMessage }}</p>
       </div>
-      <p class="inline-message" *ngIf="probeMessage">{{ probeMessage }}</p>
+
+      <div class="button-row" *ngIf="form.input_path">
+        <button type="button" class="primary-action" (click)="probe()" [disabled]="!form.input_path">Probe Source Video</button>
+      </div>
+      <p class="inline-message probe" *ngIf="probeMessage">{{ probeMessage }}</p>
 
       <div class="metadata" *ngIf="metadata">
-        <div><span>Duration</span><strong>{{ metadata.duration_seconds | number:'1.1-1' }}s</strong></div>
-        <div><span>Frames</span><strong>{{ metadata.frame_count_estimate || '-' }}</strong></div>
-        <div><span>Resolution</span><strong>{{ metadata.width }}x{{ metadata.height }}</strong></div>
-        <div><span>FPS</span><strong>{{ metadata.frame_rate | number:'1.3-3' }}</strong></div>
-        <div><span>Scan</span><strong>{{ metadata.scan_type }}</strong></div>
-        <div><span>Codec</span><strong>{{ metadata.video_codec }}</strong></div>
-        <div><span>Audio</span><strong>{{ metadata.audio_streams.length }} stream(s)</strong></div>
+        <div class="meta-tag"><span>Duration</span><strong>{{ metadata.duration_seconds | number:'1.1-1' }}s</strong></div>
+        <div class="meta-tag"><span>Frames</span><strong>{{ metadata.frame_count_estimate || '-' }}</strong></div>
+        <div class="meta-tag"><span>Resolution</span><strong>{{ metadata.width }}x{{ metadata.height }}</strong></div>
+        <div class="meta-tag"><span>Framerate</span><strong>{{ metadata.frame_rate | number:'1.2-2' }}</strong></div>
+        <div class="meta-tag"><span>Scan Type</span><strong>{{ metadata.scan_type }}</strong></div>
+        <div class="meta-tag"><span>Codec</span><strong>{{ metadata.video_codec }}</strong></div>
+        <div class="meta-tag"><span>Audio Tracks</span><strong>{{ metadata.audio_streams.length }} stream(s)</strong></div>
       </div>
     </div>
 
     <div class="panel">
       <div class="panel-title">
-        <h2>Model Test</h2>
+        <h2>Model Directory Status</h2>
         <button type="button" (click)="loadModelStatus()">Refresh</button>
       </div>
       <div class="model-list">
         <div *ngFor="let model of modelStatus?.models" [class.ready]="model.ready">
           <span>{{ model.name }}</span>
-          <strong>{{ model.ready ? 'Present' : 'Missing' }}</strong>
-          <small>{{ model.model_file_count }} model files, {{ model.size_bytes | number }} bytes</small>
+          <strong>{{ model.ready ? 'Installed' : 'Missing' }}</strong>
+          <small>{{ model.model_file_count }} files ({{ model.size_bytes | number }} bytes)</small>
         </div>
       </div>
       <div class="button-row">
         <button type="button" (click)="testModel(false)" [disabled]="modelTestRunning">Dry Run Command</button>
-        <button type="button" class="primary-action" (click)="testModel(true)" [disabled]="modelTestRunning">Run Live Smoke Test</button>
+        <button type="button" class="primary-action" (click)="testModel(true)" [disabled]="modelTestRunning">Live Smoke Test</button>
       </div>
       <div class="test-result" *ngIf="modelTest" [class.good]="modelTest.ok" [class.bad]="!modelTest.ok">
         <strong>{{ modelTest.status }}</strong>
@@ -94,51 +100,51 @@
 
   <div class="settings-grid">
     <div class="panel">
-      <h2>Preset & Target</h2>
+      <h2>Restoration Preset & Scale</h2>
       <label>
-        Processing preset
+        Restoration Profile
         <select [(ngModel)]="form.preset" name="preset">
           <option *ngFor="let preset of presets" [value]="preset">{{ preset }}</option>
         </select>
       </label>
       <label>
-        Target size
-        <select [(ngModel)]="form.target.mode" name="target">
-          <option value="keep">Keep original</option>
-          <option value="720p">720p</option>
-          <option value="1080p">1080p</option>
-          <option value="1440p">1440p</option>
-          <option value="4k">4K</option>
-          <option value="custom">Custom</option>
+        Target Scale Mode
+        <select [(ngModel)]="form.target.mode" name="target" (change)="updateDefaultOutputPath(form.input_path)">
+          <option value="keep">Keep Source Aspect / Dimensions</option>
+          <option value="720p">720p HD</option>
+          <option value="1080p">1080p Full HD</option>
+          <option value="1440p">1440p 2K</option>
+          <option value="4k">2160p 4K UHD</option>
+          <option value="custom">Custom Scale</option>
         </select>
       </label>
-      <div class="two" *ngIf="form.target.mode === 'custom'">
+      <div class="two-columns" *ngIf="form.target.mode === 'custom'">
         <label>Width <input type="number" [(ngModel)]="form.target.width" name="target_width"></label>
         <label>Height <input type="number" [(ngModel)]="form.target.height" name="target_height"></label>
       </div>
     </div>
 
     <div class="panel">
-      <h2>Preprocess</h2>
-      <label>Deinterlace <select [(ngModel)]="form.preprocessing.deinterlace" name="deinterlace">
-        <option value="none">None</option>
-        <option value="bwdif">bwdif</option>
-        <option value="qtgmc">QTGMC if available</option>
+      <h2>Preprocessing & Filters</h2>
+      <label>Deinterlacing Filter <select [(ngModel)]="form.preprocessing.deinterlace" name="deinterlace">
+        <option value="none">None (Progressive Source)</option>
+        <option value="bwdif">bwdif (Fast / Normal)</option>
+        <option value="qtgmc">QTGMC (High Quality VapourSynth)</option>
       </select></label>
-      <label>Inverse telecine <select [(ngModel)]="form.preprocessing.inverse_telecine" name="ivtc">
-        <option value="off">Off</option>
-        <option value="auto">Auto</option>
-        <option value="force_23_976">Force 23.976</option>
+      <label>Inverse Telecine (IVTC) <select [(ngModel)]="form.preprocessing.inverse_telecine" name="ivtc">
+        <option value="off">Off (Standard Broadcast)</option>
+        <option value="auto">Auto-Detect Pulldown</option>
+        <option value="force_23_976">Force 23.976fps (Film restoration)</option>
       </select></label>
-      <div class="two">
-        <label>Denoise <select [(ngModel)]="form.preprocessing.denoise" name="denoise">
-          <option value="off">Off</option>
+      <div class="two-columns">
+        <label>Denoise Mode <select [(ngModel)]="form.preprocessing.denoise" name="denoise">
+          <option value="off">Disabled</option>
           <option value="light">Light</option>
           <option value="medium">Medium</option>
           <option value="heavy">Heavy</option>
         </select></label>
-        <label>Deblock <select [(ngModel)]="form.preprocessing.deblock" name="deblock">
-          <option value="off">Off</option>
+        <label>Deblock Mode <select [(ngModel)]="form.preprocessing.deblock" name="deblock">
+          <option value="off">Disabled</option>
           <option value="light">Light</option>
           <option value="medium">Medium</option>
         </select></label>
@@ -146,66 +152,133 @@
     </div>
 
     <div class="panel">
-      <h2>SeedVR2</h2>
-      <div class="two">
-        <label>Model <select [(ngModel)]="form.seedvr2.model" name="model">
-          <option value="3B">3B</option>
-          <option value="7B">7B</option>
-          <option value="custom">Custom</option>
+      <h2>SeedVR2 Engine Parameters</h2>
+      <div class="two-columns">
+        <label>Neural Model <select [(ngModel)]="form.seedvr2.model" name="model">
+          <option value="3B">SeedVR2 3B (Faster / Low VRAM)</option>
+          <option value="7B">SeedVR2 7B (Cinematic / 16GB VRAM)</option>
+          <option value="custom">Custom Specified Model</option>
         </select></label>
         <label>Precision <select [(ngModel)]="form.seedvr2.precision" name="precision">
-          <option value="auto">Auto</option>
-          <option value="FP8">FP8</option>
-          <option value="GGUF">GGUF</option>
-          <option value="FP16">FP16</option>
+          <option value="auto">Auto-Select Optimal</option>
+          <option value="FP8">FP8 (Quantised / Fast)</option>
+          <option value="GGUF">GGUF (Balanced)</option>
+          <option value="FP16">FP16 (Uncompressed / Precise)</option>
         </select></label>
       </div>
-      <label *ngIf="form.seedvr2.model === 'custom'">Custom model path <input type="text" [(ngModel)]="form.seedvr2.custom_model_path" name="custom_model_path"></label>
-      <div class="two">
-        <label>Batch <input type="number" min="1" max="21" step="4" [(ngModel)]="form.seedvr2.batch_size" name="batch"></label>
-        <label>Overlap <input type="number" min="0" max="8" [(ngModel)]="form.seedvr2.temporal_overlap" name="overlap"></label>
+      <label *ngIf="form.seedvr2.model === 'custom'">Custom Model Folder Path <input type="text" [(ngModel)]="form.seedvr2.custom_model_path" name="custom_model_path"></label>
+      <div class="two-columns">
+        <label>Batch Size <input type="number" min="1" max="21" step="4" [(ngModel)]="form.seedvr2.batch_size" name="batch"></label>
+        <label>Temporal Overlap <input type="number" min="0" max="8" [(ngModel)]="form.seedvr2.temporal_overlap" name="overlap"></label>
       </div>
-      <div class="toggle-row">
-        <label><input type="checkbox" [(ngModel)]="form.seedvr2.vae_tiling" name="vae"> VAE tiling</label>
-        <label><input type="checkbox" [(ngModel)]="form.seedvr2.blockswap" name="blockswap"> BlockSwap</label>
-        <label><input type="checkbox" [(ngModel)]="form.seedvr2.colour_correction" name="colour"> Colour correction</label>
+      <div class="toggles-grid">
+        <label class="checkbox-label"><input type="checkbox" [(ngModel)]="form.seedvr2.vae_tiling" name="vae"> VAE Tiling (Avoids Out-Of-Memory)</label>
+        <label class="checkbox-label"><input type="checkbox" [(ngModel)]="form.seedvr2.blockswap" name="blockswap"> BlockSwap Cache</label>
+        <label class="checkbox-label"><input type="checkbox" [(ngModel)]="form.seedvr2.colour_correction" name="colour"> Spatial Colour Correction</label>
       </div>
     </div>
 
     <div class="panel output-panel">
-      <h2>Output & Sync</h2>
-      <div class="two">
-        <label>Container <select [(ngModel)]="form.encode.container" name="container">
-          <option value="mkv">MKV</option>
-          <option value="mp4">MP4</option>
-          <option value="mov">MOV</option>
-          <option value="webm">WebM</option>
+      <h2>Encoding & Multiplexing</h2>
+      <div class="two-columns">
+        <label>File Container <select [(ngModel)]="form.encode.container" name="container" (change)="updateDefaultOutputPath(form.input_path)">
+          <option value="mkv">Matroska (.mkv)</option>
+          <option value="mp4">MPEG-4 (.mp4)</option>
+          <option value="mov">QuickTime (.mov)</option>
+          <option value="webm">WebM (.webm)</option>
         </select></label>
-        <label>Video codec <select [(ngModel)]="form.encode.codec" name="codec">
-          <option value="h264">H.264</option>
-          <option value="h265">H.265</option>
+        <label>Video Codec <select [(ngModel)]="form.encode.codec" name="codec">
+          <option value="h264">H.264 / AVC</option>
+          <option value="h265">H.265 / HEVC</option>
           <option value="av1">AV1</option>
         </select></label>
       </div>
-      <div class="two">
-        <label>GPU mode <select [(ngModel)]="form.encode.hardware" name="hardware">
-          <option value="auto">Auto: GPU if visible</option>
-          <option value="nvenc">Force NVIDIA NVENC</option>
-          <option value="cpu">CPU</option>
+      <div class="two-columns">
+        <label>Hardware Encoder <select [(ngModel)]="form.encode.hardware" name="hardware">
+          <option value="auto">Auto (Prefer NVIDIA NVENC)</option>
+          <option value="nvenc">Force NVIDIA NVENC (GPU)</option>
+          <option value="cpu">CPU Software Encoder (Slower)</option>
         </select></label>
-        <label>Quality <input type="number" min="0" max="51" [(ngModel)]="form.encode.quality" name="quality"></label>
+        <label>Quality (CRF/QP) <input type="number" min="0" max="51" [(ngModel)]="form.encode.quality" name="quality"></label>
       </div>
-      <div class="two">
-        <label>Preset <input type="text" [(ngModel)]="form.encode.preset" name="encode_preset"></label>
-        <label>Audio <select [(ngModel)]="form.encode.audio_mode" name="audio_mode">
-          <option value="copy">Copy original track</option>
-          <option value="aac">Encode AAC</option>
-          <option value="opus">Encode Opus</option>
-          <option value="none">No audio</option>
+      <div class="two-columns">
+        <label>FFmpeg Speed Preset <input type="text" [(ngModel)]="form.encode.preset" name="encode_preset"></label>
+        <label>Audio Mode <select [(ngModel)]="form.encode.audio_mode" name="audio_mode">
+          <option value="copy">Copy Source Audio Streams</option>
+          <option value="aac">Re-encode AAC</option>
+          <option value="opus">Re-encode Opus</option>
+          <option value="none">Strip Audio Track</option>
         </select></label>
       </div>
-      <label *ngIf="form.encode.audio_mode === 'aac' || form.encode.audio_mode === 'opus'">Audio bitrate <input type="text" [(ngModel)]="form.encode.audio_bitrate" name="audio_bitrate"></label>
-      <label class="inline"><input type="checkbox" [(ngModel)]="form.encode.copy_audio" name="copy_audio"> Include source audio and preserve sync metadata</label>
+      <label *ngIf="form.encode.audio_mode === 'aac' || form.encode.audio_mode === 'opus'">Audio Bitrate <input type="text" [(ngModel)]="form.encode.audio_bitrate" name="audio_bitrate"></label>
+      <label class="checkbox-label inline"><input type="checkbox" [(ngModel)]="form.encode.copy_audio" name="copy_audio"> Sync Metadata & Preserves Chapters</label>
     </div>
   </div>
 </section>
+
+<div class="modal-overlay" *ngIf="showBrowseModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3>Select {{ browseTarget === 'source' ? 'Source Video File' : 'Destination Output Directory' }}</h3>
+      <button type="button" class="close-btn" (click)="showBrowseModal = false">&times;</button>
+    </div>
+
+    <div class="modal-body">
+      <label class="root-selector">
+        Browse Root
+        <select [(ngModel)]="currentRootId" name="browse_root" (change)="loadBrowsePath('', currentRootId)">
+          <option *ngFor="let root of browseRoots" [value]="root.id" [disabled]="!root.exists">
+            {{ root.label }} - {{ root.path }}{{ root.exists ? '' : ' (unavailable)' }}
+          </option>
+        </select>
+      </label>
+
+      <div class="breadcrumbs">
+        <span class="root-segment" (click)="navigateBrowse('')">{{ browseData?.root_label || 'Root' }}</span>
+        <span class="path-segment" *ngFor="let crumb of browseCrumbs" (click)="navigateBrowse(crumb.path)">
+          / {{ crumb.label }}
+        </span>
+      </div>
+
+      <div class="modal-controls">
+        <input type="text" placeholder="Filter folders and files..." [(ngModel)]="browseSearchQuery" class="filter-input">
+        <button type="button" *ngIf="browseData?.parent_path !== null" (click)="navigateBrowse(browseData?.parent_path || '')" class="up-btn">
+          Go Up
+        </button>
+      </div>
+
+      <div class="browse-list">
+        <div class="browse-row folder-row" *ngFor="let dir of filteredFolders" (dblclick)="navigateBrowse(dir.relative_path)">
+          <span class="row-icon">DIR</span>
+          <span class="row-name">{{ dir.name }}</span>
+          <button type="button" class="row-select-btn" (click)="navigateBrowse(dir.relative_path)">Open</button>
+        </div>
+
+        <div class="browse-row file-row" *ngFor="let file of filteredFiles" [class.disabled]="browseTarget === 'destination'" (click)="selectFile(file)">
+          <span class="row-icon">VID</span>
+          <span class="row-name">{{ file.name }}</span>
+          <span class="row-meta" *ngIf="file.size_bytes">{{ file.size_bytes | number }} bytes</span>
+        </div>
+
+        <div class="no-items-card" *ngIf="filteredFolders.length === 0 && filteredFiles.length === 0">
+          <p>This directory is empty or contains no matching files.</p>
+        </div>
+      </div>
+
+      <div class="destination-options" *ngIf="browseTarget === 'destination'">
+        <div class="file-name-composer">
+          <label>
+            Output Filename
+            <input type="text" [(ngModel)]="newFilename" placeholder="Enter file name...">
+          </label>
+          <span class="composer-ext">.{{ form.encode.container }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" (click)="showBrowseModal = false" class="cancel-btn">Cancel</button>
+      <button type="button" class="primary-action" *ngIf="browseTarget === 'destination'" (click)="confirmDestinationBrowse()">Select Location</button>
+    </div>
+  </div>
+</div>

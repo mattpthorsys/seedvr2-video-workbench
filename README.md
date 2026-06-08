@@ -59,6 +59,8 @@ docker compose build
 docker compose up
 ```
 
+This is not hosted anywhere by default. It runs locally on your machine through Docker.
+
 Open the GUI:
 
 ```text
@@ -102,6 +104,26 @@ Models should be mounted or copied under:
 ```
 
 The GUI New Job page also has a file picker. Picked files are copied into `./data/input` before probing and queueing.
+
+The New Job file dialog can browse configured roots. Docker defaults are:
+
+```text
+/data
+/models
+/external
+```
+
+The `./external` folder is mounted into both the backend and worker containers. To browse another host folder, add a bind mount in `docker-compose.yml` and include the container path in `BROWSE_ROOTS`. For Docker, keep the root list colon-separated inside the container, for example:
+
+```env
+BROWSE_ROOTS=/data:/models:/external:/media/archive
+```
+
+For local Windows backend development without Docker, use Windows paths and a semicolon-separated list, for example:
+
+```powershell
+$env:BROWSE_ROOTS="C:\Users\mpalm\Videos;D:\Archive"
+```
 
 ## SeedVR2 Configuration
 
@@ -160,6 +182,8 @@ GET    /api/settings
 POST   /api/probe
 GET    /api/files/input
 POST   /api/files/input/upload
+GET    /api/files/roots
+GET    /api/files/browse
 GET    /api/models
 POST   /api/models/test
 GET    /api/jobs
