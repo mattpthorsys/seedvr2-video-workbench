@@ -164,7 +164,10 @@ export class NewJobComponent implements OnInit, OnDestroy {
         }
         this.queueDownloadPoll(this.hasActiveDownloads() ? 3000 : 15000);
       },
-      error: () => this.queueDownloadPoll(15000)
+      error: (error) => {
+        this.downloadMessage = this.modelDownloadErrorMessage(error);
+        this.queueDownloadPoll(15000);
+      }
     });
   }
 
@@ -205,7 +208,7 @@ export class NewJobComponent implements OnInit, OnDestroy {
         this.loadModelStatus();
       },
       error: (error) => {
-        this.downloadMessage = error?.error?.detail || `Could not start ${model} download.`;
+        this.downloadMessage = this.modelDownloadErrorMessage(error) || `Could not start ${model} download.`;
         this.loadModelDownloads();
       }
     });
@@ -222,6 +225,13 @@ export class NewJobComponent implements OnInit, OnDestroy {
       return;
     }
     this.modelDownloads = this.modelDownloads.map((item, index) => (index === existingIndex ? download : item));
+  }
+
+  private modelDownloadErrorMessage(error: any): string {
+    if (error?.status === 404) {
+      return 'The backend does not have the model download endpoint yet. Rebuild/restart the backend container, then try again.';
+    }
+    return error?.error?.detail || error?.message || 'Could not read model download status.';
   }
 
   private queueDownloadPoll(delayMs: number): void {

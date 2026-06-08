@@ -1,6 +1,14 @@
 from __future__ import annotations
 
+from app.main import app
 from app.model_downloads import download_status, model_download_options, start_model_download
+
+
+def test_model_download_routes_are_registered():
+    routes = {(route.path, tuple(sorted(route.methods))) for route in app.routes if hasattr(route, "methods")}
+
+    assert ("/api/models/downloads", ("GET",)) in routes
+    assert ("/api/models/downloads", ("POST",)) in routes
 
 
 def test_model_download_status_reports_idle_downloadables(settings):

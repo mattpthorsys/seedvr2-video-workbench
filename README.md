@@ -312,6 +312,7 @@ Covered areas:
 
 - Docker command is not found: finish installing Docker Desktop and restart the terminal.
 - GPU is unavailable in the app: confirm `nvidia-smi` works on Windows and in a Docker CUDA container.
+- `/api/models/downloads` returns 404: rebuild and restart the backend container with `docker compose build backend && docker compose up`; the frontend button exists but the older backend image does not have the download endpoint.
 - `/api/probe` fails: confirm the file is inside `./data/input` and FFprobe supports the format.
 - Jobs remain queued: confirm the `worker` service is running, or set `RUN_IN_PROCESS_WORKER=true` for local backend-only development.
 - SeedVR2 setup error: keep `MOCK_PIPELINE=true` until the real SeedVR repo is mounted, dependencies are installed, `torchrun` is available, and model files are present.
