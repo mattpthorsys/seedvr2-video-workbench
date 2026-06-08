@@ -1,0 +1,56 @@
+.job-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  align-items: start;
+}
+
+.job-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.job-facts div {
+  border: 1px solid #e2e7ee;
+  border-radius: 6px;
+  padding: 10px;
+}
+
+.job-facts span {
+  color: #687587;
+  font-size: 13px;
+}
+
+.job-facts strong {
+  display: block;
+  margin-top: 3px;
+}
+
+.progress-bar {
+  height: 16px;
+  background: #dfe5ec;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+
+.progress-bar span {
+  display: block;
+  height: 100%;
+  background: #1c6b5d;
+}
+
+@media (max-width: 980px) {
+  .job-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .job-facts {
+    grid-template-columns: 1fr;
+  }
+}
+

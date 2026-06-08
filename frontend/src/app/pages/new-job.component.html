@@ -1,0 +1,129 @@
+<section class="page-header">
+  <div>
+    <h1>New Job</h1>
+    <p>Pick an input, inspect it, choose a preset, then queue the restoration pass.</p>
+  </div>
+  <button type="button" class="primary-action" (click)="submit()" [disabled]="!form.input_path">Start Job</button>
+</section>
+
+<section class="form-grid">
+  <div class="panel">
+    <h2>Source</h2>
+    <label>
+      Input file
+      <select [(ngModel)]="form.input_path" name="input_path">
+        <option value="">Select from /data/input</option>
+        <option *ngFor="let file of inputFiles" [value]="file.relative_path">{{ file.relative_path }}</option>
+      </select>
+    </label>
+    <div class="button-row">
+      <button type="button" (click)="probe()" [disabled]="!form.input_path">Probe</button>
+      <button type="button" (click)="loadInputs()">Refresh</button>
+    </div>
+    <div class="metadata" *ngIf="metadata">
+      <div><span>Duration</span><strong>{{ metadata.duration_seconds | number:'1.1-1' }}s</strong></div>
+      <div><span>Frames</span><strong>{{ metadata.frame_count_estimate || '-' }}</strong></div>
+      <div><span>Resolution</span><strong>{{ metadata.width }}x{{ metadata.height }}</strong></div>
+      <div><span>FPS</span><strong>{{ metadata.frame_rate | number:'1.3-3' }}</strong></div>
+      <div><span>Scan</span><strong>{{ metadata.scan_type }}</strong></div>
+      <div><span>Codec</span><strong>{{ metadata.video_codec }}</strong></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Preset</h2>
+    <label>
+      Processing preset
+      <select [(ngModel)]="form.preset" name="preset">
+        <option *ngFor="let preset of presets" [value]="preset">{{ preset }}</option>
+      </select>
+    </label>
+    <label>
+      Target size
+      <select [(ngModel)]="form.target.mode" name="target">
+        <option value="keep">Keep original</option>
+        <option value="720p">720p</option>
+        <option value="1080p">1080p</option>
+        <option value="1440p">1440p</option>
+        <option value="4k">4K</option>
+        <option value="custom">Custom</option>
+      </select>
+    </label>
+    <div class="two" *ngIf="form.target.mode === 'custom'">
+      <label>Width <input type="number" [(ngModel)]="form.target.width" name="target_width"></label>
+      <label>Height <input type="number" [(ngModel)]="form.target.height" name="target_height"></label>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Preprocess</h2>
+    <label>Deinterlace <select [(ngModel)]="form.preprocessing.deinterlace" name="deinterlace">
+      <option value="none">None</option>
+      <option value="bwdif">bwdif</option>
+      <option value="qtgmc">QTGMC if available</option>
+    </select></label>
+    <label>Inverse telecine <select [(ngModel)]="form.preprocessing.inverse_telecine" name="ivtc">
+      <option value="off">Off</option>
+      <option value="auto">Auto</option>
+      <option value="force_23_976">Force 23.976</option>
+    </select></label>
+    <label>Denoise <select [(ngModel)]="form.preprocessing.denoise" name="denoise">
+      <option value="off">Off</option>
+      <option value="light">Light</option>
+      <option value="medium">Medium</option>
+      <option value="heavy">Heavy</option>
+    </select></label>
+    <label>Deblock <select [(ngModel)]="form.preprocessing.deblock" name="deblock">
+      <option value="off">Off</option>
+      <option value="light">Light</option>
+      <option value="medium">Medium</option>
+    </select></label>
+  </div>
+
+  <div class="panel">
+    <h2>SeedVR2</h2>
+    <div class="two">
+      <label>Model <select [(ngModel)]="form.seedvr2.model" name="model">
+        <option value="3B">3B</option>
+        <option value="7B">7B</option>
+        <option value="custom">Custom</option>
+      </select></label>
+      <label>Precision <select [(ngModel)]="form.seedvr2.precision" name="precision">
+        <option value="auto">Auto</option>
+        <option value="FP8">FP8</option>
+        <option value="GGUF">GGUF</option>
+        <option value="FP16">FP16</option>
+      </select></label>
+    </div>
+    <div class="two">
+      <label>Batch <input type="number" min="1" max="21" step="4" [(ngModel)]="form.seedvr2.batch_size" name="batch"></label>
+      <label>Overlap <input type="number" min="0" max="8" [(ngModel)]="form.seedvr2.temporal_overlap" name="overlap"></label>
+    </div>
+    <div class="toggle-row">
+      <label><input type="checkbox" [(ngModel)]="form.seedvr2.vae_tiling" name="vae"> VAE tiling</label>
+      <label><input type="checkbox" [(ngModel)]="form.seedvr2.blockswap" name="blockswap"> BlockSwap</label>
+      <label><input type="checkbox" [(ngModel)]="form.seedvr2.colour_correction" name="colour"> Colour correction</label>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Encode</h2>
+    <div class="two">
+      <label>Codec <select [(ngModel)]="form.encode.codec" name="codec">
+        <option value="h264">H.264</option>
+        <option value="h265">H.265</option>
+        <option value="av1">AV1</option>
+      </select></label>
+      <label>Mode <select [(ngModel)]="form.encode.hardware" name="hardware">
+        <option value="nvenc">NVIDIA NVENC</option>
+        <option value="cpu">CPU</option>
+      </select></label>
+    </div>
+    <div class="two">
+      <label>Quality <input type="number" min="0" max="51" [(ngModel)]="form.encode.quality" name="quality"></label>
+      <label>Preset <input type="text" [(ngModel)]="form.encode.preset" name="encode_preset"></label>
+    </div>
+    <label class="inline"><input type="checkbox" [(ngModel)]="form.encode.copy_audio" name="copy_audio"> Copy audio where possible</label>
+  </div>
+</section>
+

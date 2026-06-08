@@ -7,37 +7,8 @@ import { ApiService } from '../services/api.service';
   selector: 'app-settings',
   standalone: true,
   imports: [CommonModule],
-  template: `
-    <section class="page-header">
-      <div>
-        <h1>Settings</h1>
-        <p>Runtime paths and local capability checks.</p>
-      </div>
-      <button type="button" (click)="load()">Refresh</button>
-    </section>
-
-    <section class="split">
-      <div class="panel">
-        <h2>Application</h2>
-        <dl>
-          <div *ngFor="let item of settingItems">
-            <dt>{{ item.key }}</dt>
-            <dd>{{ item.value }}</dd>
-          </div>
-        </dl>
-      </div>
-
-      <div class="panel">
-        <h2>GPU</h2>
-        <dl>
-          <div *ngFor="let item of gpuItems">
-            <dt>{{ item.key }}</dt>
-            <dd>{{ item.value }}</dd>
-          </div>
-        </dl>
-      </div>
-    </section>
-  `
+  templateUrl: './settings.component.html',
+  styleUrls: ['./settings.component.css']
 })
 export class SettingsComponent implements OnInit {
   settings: Record<string, unknown> = {};
@@ -63,4 +34,3 @@ export class SettingsComponent implements OnInit {
     this.api.health().subscribe((health) => (this.health = health));
   }
 }
-

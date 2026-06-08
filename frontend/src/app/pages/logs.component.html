@@ -1,0 +1,16 @@
+<section class="page-header">
+  <div>
+    <h1>Logs</h1>
+    <p>Command output and worker messages for queued and completed jobs.</p>
+  </div>
+</section>
+<section class="panel">
+  <label>
+    Job
+    <select [(ngModel)]="selectedId" name="selectedId" (change)="loadLogs()">
+      <option *ngFor="let job of jobs" [ngValue]="job.id">#{{ job.id }} - {{ job.status }} - {{ job.input_path }}</option>
+    </select>
+  </label>
+  <pre class="log-output tall">{{ logText }}</pre>
+</section>
+

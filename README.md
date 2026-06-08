@@ -189,6 +189,20 @@ cd backend
 pytest
 ```
 
+Docker-based test run from the project root:
+
+```powershell
+.\scripts\run-tests.ps1
+```
+
+Or run the same checks manually:
+
+```powershell
+docker compose --profile test build backend-tests frontend-tests
+docker compose --profile test run --rm backend-tests
+docker compose --profile test run --rm frontend-tests
+```
+
 Covered areas:
 
 - ETA with no history
@@ -220,4 +234,3 @@ Covered areas:
 3. Add SeedVR2 progress parser support for live upscale stage progress.
 4. Wire final encode/mux execution and audio copy validation.
 5. Add frontend affordances for opening output paths on Windows/WSL.
-

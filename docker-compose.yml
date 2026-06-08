@@ -48,3 +48,24 @@ services:
       - "4200:80"
     depends_on:
       - backend
+
+  backend-tests:
+    profiles:
+      - test
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      DATA_DIR: /tmp/seedvr2-test-data
+      DATABASE_URL: sqlite:////tmp/seedvr2-test-data/app.db
+      MOCK_PIPELINE: "true"
+    command: pytest tests
+
+  frontend-tests:
+    profiles:
+      - test
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      target: build
+    command: npm run build
