@@ -90,22 +90,26 @@ export interface ModelStatus {
 
 export interface ModelDownloadStatus {
   model: string;
-  status: 'idle' | 'queued' | 'running' | 'complete' | 'failed';
+  status: 'idle' | 'queued' | 'running' | 'canceling' | 'canceled' | 'complete' | 'failed';
   repo_id: string;
   target_dir: string;
+  files: string[];
   message: string;
   started_at?: string | null;
   finished_at?: string | null;
   error?: string | null;
   bytes_downloaded: number;
   estimated_bytes?: number | null;
+  cache_dir?: string | null;
 }
 
 export interface ModelDownloadOption {
   model: string;
   repo_id: string;
   description: string;
+  target_model: string;
   estimated_bytes: number;
+  files: string[];
 }
 
 export interface ModelDownloadsResponse {
@@ -162,6 +166,10 @@ export class ApiService {
 
   startModelDownload(model: string): Observable<ModelDownloadStatus> {
     return this.http.post<ModelDownloadStatus>('/api/models/downloads', { model });
+  }
+
+  cancelModelDownload(model: string): Observable<ModelDownloadStatus> {
+    return this.http.post<ModelDownloadStatus>(`/api/models/downloads/${encodeURIComponent(model)}/cancel`, {});
   }
 
   testModel(payload: unknown): Observable<ModelTestResult> {

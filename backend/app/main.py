@@ -14,7 +14,7 @@ from .file_browser import browse_directory, browse_roots, resolve_managed_path
 from .gpu import read_gpu_snapshot
 from .jobs import cancel_job, create_job, get_job, get_stage_stats, list_jobs, read_logs, run_job
 from .model_check import inspect_seedvr2_environment, test_seedvr2_model
-from .model_downloads import download_status, model_download_options, start_model_download
+from .model_downloads import cancel_model_download, download_status, model_download_options, start_model_download
 from .schemas import JobCreate, ModelDownloadRequest, ModelTestRequest, ProbeRequest
 from .video_probe import list_input_files, run_ffprobe, save_uploaded_video
 
@@ -126,6 +126,14 @@ def model_downloads() -> dict[str, Any]:
 def start_download(request: ModelDownloadRequest) -> dict[str, Any]:
     try:
         return start_model_download(settings, request.model)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/models/downloads/{model}/cancel")
+def cancel_download(model: str) -> dict[str, Any]:
+    try:
+        return cancel_model_download(settings, model)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

@@ -224,6 +224,18 @@
   text-align: center;
 }
 
+.cancel-download {
+  width: 100%;
+  border-color: rgba(244, 63, 94, 0.25);
+  background: rgba(244, 63, 94, 0.08);
+  color: #fecdd3;
+}
+
+.cancel-download:hover {
+  border-color: rgba(244, 63, 94, 0.5);
+  background: rgba(244, 63, 94, 0.16);
+}
+
 .download-copy.selected,
 .inline-message.download {
   grid-column: 1 / -1;

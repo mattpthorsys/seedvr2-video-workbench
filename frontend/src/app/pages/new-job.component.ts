@@ -112,7 +112,7 @@ export class NewJobComponent implements OnInit, OnDestroy {
     if (!download) {
       return 'Waiting for download status...';
     }
-    if (download.status === 'running' || download.status === 'queued') {
+    if (download.status === 'running' || download.status === 'queued' || download.status === 'canceling') {
       return `${download.model} ${download.status}: ${this.downloadPercent(download)}%`;
     }
     return `${download.model} ${download.status}`;
@@ -187,8 +187,21 @@ export class NewJobComponent implements OnInit, OnDestroy {
     return status === 'queued' || status === 'running';
   }
 
+  isDownloadBusy(model: string): boolean {
+    const status = this.downloadFor(model)?.status;
+    return status === 'queued' || status === 'running' || status === 'canceling';
+  }
+
+  canCancelDownload(model: string): boolean {
+    return this.isDownloading(model);
+  }
+
   downloadDescription(model: string): string {
-    return this.downloadOptions.find((option) => option.model === model)?.description || 'Official ByteDance SeedVR2 model snapshot';
+    const option = this.downloadOptions.find((downloadOption) => downloadOption.model === model);
+    if (!option) {
+      return 'Official ByteDance SeedVR2 model snapshot';
+    }
+    return `${option.description} (${option.files.join(', ')})`;
   }
 
   startSelectedModelDownload(): void {
@@ -214,8 +227,23 @@ export class NewJobComponent implements OnInit, OnDestroy {
     });
   }
 
+  cancelSelectedModelDownload(): void {
+    const model = this.selectedDownloadModel;
+    this.downloadMessage = `Canceling ${model} download...`;
+    this.api.cancelModelDownload(model).subscribe({
+      next: (download) => {
+        this.upsertDownload(download);
+        this.downloadMessage = download.message;
+        this.loadModelDownloads();
+      },
+      error: (error) => {
+        this.downloadMessage = this.modelDownloadErrorMessage(error) || `Could not cancel ${model} download.`;
+      }
+    });
+  }
+
   private hasActiveDownloads(): boolean {
-    return this.modelDownloads.some((download) => download.status === 'queued' || download.status === 'running');
+    return this.modelDownloads.some((download) => download.status === 'queued' || download.status === 'running' || download.status === 'canceling');
   }
 
   private upsertDownload(download: ModelDownloadStatus): void {

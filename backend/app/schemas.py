@@ -125,4 +125,4 @@ class ModelTestRequest(BaseModel):
 
 
 class ModelDownloadRequest(BaseModel):
-    model: Literal["3B", "7B"] = "3B"
+    model: Literal["3B", "7B", "7B-sharp"] = "3B"

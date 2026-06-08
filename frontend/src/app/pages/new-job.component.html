@@ -85,10 +85,13 @@
             <option *ngFor="let model of downloadChoices" [value]="model">{{ model }}</option>
           </select>
         </label>
-        <button type="button" class="primary-action" (click)="startSelectedModelDownload()" [disabled]="selectedDownloadIsReady || isDownloading(selectedDownloadModel)">
-          {{ selectedDownloadIsReady ? 'Downloaded' : isDownloading(selectedDownloadModel) ? 'Downloading' : 'Download Selected Model' }}
+        <button type="button" class="primary-action" (click)="startSelectedModelDownload()" [disabled]="selectedDownloadIsReady || isDownloadBusy(selectedDownloadModel)">
+          {{ selectedDownloadIsReady ? 'Downloaded' : isDownloadBusy(selectedDownloadModel) ? 'Downloading' : 'Download Selected Model' }}
         </button>
-        <div class="download-copy selected" [class.active]="isDownloading(selectedDownloadModel)" *ngIf="selectedDownload as download">
+        <button type="button" class="cancel-download" (click)="cancelSelectedModelDownload()" [disabled]="!canCancelDownload(selectedDownloadModel)" *ngIf="isDownloadBusy(selectedDownloadModel)">
+          Cancel Download
+        </button>
+        <div class="download-copy selected" [class.active]="isDownloadBusy(selectedDownloadModel)" *ngIf="selectedDownload as download">
           <span>{{ selectedDownloadStatusText }}</span>
           <small>{{ downloadDescription(selectedDownloadModel) }}</small>
           <small>{{ download.message }} {{ download.bytes_downloaded | number }} / {{ download.estimated_bytes ? (download.estimated_bytes | number) : 'unknown' }} bytes</small>

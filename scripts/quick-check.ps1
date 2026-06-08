@@ -13,13 +13,14 @@ $Python = Join-Path $Root "backend\.venv\Scripts\python.exe"
 if (-not (Test-Path $Python)) {
   $Python = "python"
 }
+$PytestBaseTemp = Join-Path $Root "work\pytest-temp"
 
 Write-Host "Compiling backend and worker Python..."
 & $Python -m compileall -q backend\app worker
 
 if ($Full) {
   Write-Host "Running full backend test suite..."
-  & $Python -m pytest backend\tests
+  & $Python -m pytest backend\tests --basetemp $PytestBaseTemp
 } else {
   $ChangedFiles = @()
   try {
@@ -52,7 +53,7 @@ if ($Full) {
   if ($SelectedTests.Count -gt 0) {
     Write-Host "Running focused backend tests for current changes..."
     $TestArgs = @($SelectedTests.ToArray())
-    & $Python -m pytest @TestArgs
+    & $Python -m pytest @TestArgs --basetemp $PytestBaseTemp
   } else {
     Write-Host "No mapped backend tests for the current diff."
   }

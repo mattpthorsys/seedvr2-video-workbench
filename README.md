@@ -143,14 +143,14 @@ SEEDVR2_MODEL_DIR=/models/seedvr2
 MOCK_PIPELINE=true
 ```
 
-The app can download official ByteDance model snapshots into `./models/seedvr2/3B` and `./models/seedvr2/7B` from:
+The app can download official ByteDance model artifacts into `./models/seedvr2/3B` and `./models/seedvr2/7B` from:
 
 ```text
 ByteDance-Seed/SeedVR2-3B
 ByteDance-Seed/SeedVR2-7B
 ```
 
-The download controls are on the New Job page. The backend reports status at `GET /api/models/downloads` and starts a download with `POST /api/models/downloads`.
+The download controls are on the New Job page. Download choices are split into `3B`, `7B`, and `7B-sharp` so the 7B option does not pull both large 7B checkpoints. The backend reports status at `GET /api/models/downloads`, starts a download with `POST /api/models/downloads`, and requests cancellation with `POST /api/models/downloads/{model}/cancel`.
 
 To connect the real SeedVR2 runner:
 
