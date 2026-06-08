@@ -79,6 +79,25 @@
         <h2>Model Directory Status</h2>
         <button type="button" (click)="loadModelStatus()">Refresh</button>
       </div>
+      <div class="download-console">
+        <label>Download Model
+          <select [(ngModel)]="selectedDownloadModel" name="selected_download_model">
+            <option *ngFor="let model of downloadChoices" [value]="model">{{ model }}</option>
+          </select>
+        </label>
+        <button type="button" class="primary-action" (click)="startSelectedModelDownload()" [disabled]="selectedDownloadIsReady || isDownloading(selectedDownloadModel)">
+          {{ selectedDownloadIsReady ? 'Downloaded' : isDownloading(selectedDownloadModel) ? 'Downloading' : 'Download Selected Model' }}
+        </button>
+        <div class="download-copy selected" *ngIf="selectedDownload as download">
+          <span>{{ download.status }}</span>
+          <small>{{ downloadDescription(selectedDownloadModel) }}</small>
+          <small>{{ download.message }} {{ download.bytes_downloaded | number }} / {{ download.estimated_bytes ? (download.estimated_bytes | number) : 'unknown' }} bytes</small>
+          <div class="download-bar">
+            <i [style.width.%]="downloadPercent(download)"></i>
+          </div>
+        </div>
+        <p class="inline-message download" *ngIf="downloadMessage">{{ downloadMessage }}</p>
+      </div>
       <div class="model-list">
         <div *ngFor="let model of modelStatus?.models" [class.ready]="model.ready">
           <span>{{ model.name }}</span>

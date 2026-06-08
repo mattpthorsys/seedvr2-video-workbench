@@ -250,17 +250,41 @@ http://localhost:4200
 
 ## Tests
 
-Backend tests:
+Focused local check from the project root:
+
+```powershell
+.\scripts\quick-check.ps1
+```
+
+If local script execution is blocked by Windows policy, run the same check with:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\quick-check.ps1
+```
+
+That compiles backend/worker Python and only runs mapped backend tests for files changed since `HEAD`. Use the fuller local path when you want broader coverage:
+
+```powershell
+.\scripts\quick-check.ps1 -Full -Frontend
+```
+
+Backend tests only:
 
 ```powershell
 cd backend
 pytest
 ```
 
-Docker-based test run from the project root:
+Full Docker-based test run from the project root:
 
 ```powershell
 .\scripts\run-tests.ps1
+```
+
+To only validate the Docker Compose test profile without building images:
+
+```powershell
+.\scripts\quick-check.ps1 -Docker
 ```
 
 Or run the same checks manually:

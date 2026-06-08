@@ -3,7 +3,7 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 
-import { ApiService, BrowseResponse, BrowseItem, BrowseRoot, InputFile, ModelDownloadStatus, ModelStatus, ModelTestResult, VideoMetadata } from '../services/api.service';
+import { ApiService, BrowseResponse, BrowseItem, BrowseRoot, InputFile, ModelDownloadOption, ModelDownloadStatus, ModelStatus, ModelTestResult, VideoMetadata } from '../services/api.service';
 
 @Component({
   selector: 'app-new-job',
@@ -17,11 +17,15 @@ export class NewJobComponent implements OnInit, OnDestroy {
   metadata?: VideoMetadata;
   modelStatus?: ModelStatus;
   modelTest?: ModelTestResult;
+  downloadOptions: ModelDownloadOption[] = [];
   modelDownloads: ModelDownloadStatus[] = [];
+  selectedDownloadModel = '3B';
+  downloadMessage = '';
   uploadMessage = '';
   probeMessage = '';
   modelTestRunning = false;
-  private downloadPoll?: ReturnType<typeof setInterval>;
+  private downloadPoll?: ReturnType<typeof setTimeout>;
+  private destroyed = false;
 
   showBrowseModal = false;
   browseTarget: 'source' | 'destination' = 'source';
@@ -67,12 +71,12 @@ export class NewJobComponent implements OnInit, OnDestroy {
     this.loadModelStatus();
     this.loadBrowseRoots();
     this.loadModelDownloads();
-    this.downloadPoll = setInterval(() => this.loadModelDownloads(), 4000);
   }
 
   ngOnDestroy(): void {
+    this.destroyed = true;
     if (this.downloadPoll) {
-      clearInterval(this.downloadPoll);
+      clearTimeout(this.downloadPoll);
     }
   }
 
@@ -87,6 +91,20 @@ export class NewJobComponent implements OnInit, OnDestroy {
 
   get canSubmit(): boolean {
     return !!this.form.input_path;
+  }
+
+  get downloadChoices(): string[] {
+    const choices = this.downloadOptions.map((option) => option.model);
+    return choices.length ? choices : ['3B', '7B'];
+  }
+
+  get selectedDownload(): ModelDownloadStatus | undefined {
+    return this.downloadFor(this.selectedDownloadModel);
+  }
+
+  get selectedDownloadIsReady(): boolean {
+    const installed = this.modelStatus?.models.find((model) => model.name === this.selectedDownloadModel)?.ready;
+    return !!installed || this.selectedDownload?.status === 'complete';
   }
 
   get filteredFolders(): BrowseItem[] {
@@ -125,7 +143,18 @@ export class NewJobComponent implements OnInit, OnDestroy {
   }
 
   loadModelDownloads(): void {
-    this.api.modelDownloads().subscribe((response) => (this.modelDownloads = response.downloads));
+    this.api.modelDownloads().subscribe({
+      next: (response) => {
+        this.downloadOptions = response.options;
+        this.modelDownloads = response.downloads;
+        const models = this.downloadChoices;
+        if (models.length && !models.includes(this.selectedDownloadModel)) {
+          this.selectedDownloadModel = models[0];
+        }
+        this.queueDownloadPoll(this.hasActiveDownloads() ? 3000 : 15000);
+      },
+      error: () => this.queueDownloadPoll(15000)
+    });
   }
 
   downloadFor(model: string): ModelDownloadStatus | undefined {
@@ -144,14 +173,44 @@ export class NewJobComponent implements OnInit, OnDestroy {
     return status === 'queued' || status === 'running';
   }
 
+  downloadDescription(model: string): string {
+    return this.downloadOptions.find((option) => option.model === model)?.description || 'Official ByteDance SeedVR2 model snapshot';
+  }
+
+  startSelectedModelDownload(): void {
+    this.startModelDownload(this.selectedDownloadModel);
+  }
+
   startModelDownload(model: string): void {
+    if (!model) {
+      return;
+    }
+    this.downloadMessage = `Starting ${model} download...`;
     this.api.startModelDownload(model).subscribe({
-      next: () => {
+      next: (download) => {
+        this.downloadMessage = `${model} download is ${download.status}.`;
         this.loadModelDownloads();
         this.loadModelStatus();
       },
-      error: () => this.loadModelDownloads()
+      error: (error) => {
+        this.downloadMessage = error?.error?.detail || `Could not start ${model} download.`;
+        this.loadModelDownloads();
+      }
     });
+  }
+
+  private hasActiveDownloads(): boolean {
+    return this.modelDownloads.some((download) => download.status === 'queued' || download.status === 'running');
+  }
+
+  private queueDownloadPoll(delayMs: number): void {
+    if (this.destroyed) {
+      return;
+    }
+    if (this.downloadPoll) {
+      clearTimeout(this.downloadPoll);
+    }
+    this.downloadPoll = setTimeout(() => this.loadModelDownloads(), delayMs);
   }
 
   loadBrowseRoots(): void {
