@@ -107,6 +107,17 @@ export class NewJobComponent implements OnInit, OnDestroy {
     return !!installed || this.selectedDownload?.status === 'complete';
   }
 
+  get selectedDownloadStatusText(): string {
+    const download = this.selectedDownload;
+    if (!download) {
+      return 'Waiting for download status...';
+    }
+    if (download.status === 'running' || download.status === 'queued') {
+      return `${download.model} ${download.status}: ${this.downloadPercent(download)}%`;
+    }
+    return `${download.model} ${download.status}`;
+  }
+
   get filteredFolders(): BrowseItem[] {
     if (!this.browseData?.folders) return [];
     return this.browseData.folders.filter(f => f.name.toLowerCase().includes(this.browseSearchQuery.toLowerCase()));
@@ -188,7 +199,8 @@ export class NewJobComponent implements OnInit, OnDestroy {
     this.downloadMessage = `Starting ${model} download...`;
     this.api.startModelDownload(model).subscribe({
       next: (download) => {
-        this.downloadMessage = `${model} download is ${download.status}.`;
+        this.upsertDownload(download);
+        this.downloadMessage = `${model} download ${download.status}. This panel will keep updating while it runs.`;
         this.loadModelDownloads();
         this.loadModelStatus();
       },
@@ -201,6 +213,15 @@ export class NewJobComponent implements OnInit, OnDestroy {
 
   private hasActiveDownloads(): boolean {
     return this.modelDownloads.some((download) => download.status === 'queued' || download.status === 'running');
+  }
+
+  private upsertDownload(download: ModelDownloadStatus): void {
+    const existingIndex = this.modelDownloads.findIndex((item) => item.model === download.model);
+    if (existingIndex === -1) {
+      this.modelDownloads = [...this.modelDownloads, download];
+      return;
+    }
+    this.modelDownloads = this.modelDownloads.map((item, index) => (index === existingIndex ? download : item));
   }
 
   private queueDownloadPoll(delayMs: number): void {
@@ -346,11 +367,16 @@ export class NewJobComponent implements OnInit, OnDestroy {
     if (this.browseTarget !== 'source') {
       return;
     }
-    this.form.input_path = item.select_path;
+    const selectedPath = item.select_path || item.relative_path || item.name;
+    if (!selectedPath) {
+      this.probeMessage = 'Could not select that file because the browser did not return a usable path.';
+      return;
+    }
+    this.form.input_path = selectedPath;
     this.showBrowseModal = false;
     this.metadata = undefined;
     this.probe();
-    this.updateDefaultOutputPath(item.select_path);
+    this.updateDefaultOutputPath(selectedPath);
   }
 
   confirmDestinationBrowse(): void {
@@ -363,7 +389,10 @@ export class NewJobComponent implements OnInit, OnDestroy {
     }
   }
 
-  updateDefaultOutputPath(inputPath: string): void {
+  updateDefaultOutputPath(inputPath?: string): void {
+    if (!inputPath) {
+      return;
+    }
     const base = inputPath.split('/').pop() || 'video.mp4';
     const dotIndex = base.lastIndexOf('.');
     const stem = dotIndex !== -1 ? base.substring(0, dotIndex) : base;

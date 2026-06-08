@@ -88,13 +88,17 @@
         <button type="button" class="primary-action" (click)="startSelectedModelDownload()" [disabled]="selectedDownloadIsReady || isDownloading(selectedDownloadModel)">
           {{ selectedDownloadIsReady ? 'Downloaded' : isDownloading(selectedDownloadModel) ? 'Downloading' : 'Download Selected Model' }}
         </button>
-        <div class="download-copy selected" *ngIf="selectedDownload as download">
-          <span>{{ download.status }}</span>
+        <div class="download-copy selected" [class.active]="isDownloading(selectedDownloadModel)" *ngIf="selectedDownload as download">
+          <span>{{ selectedDownloadStatusText }}</span>
           <small>{{ downloadDescription(selectedDownloadModel) }}</small>
           <small>{{ download.message }} {{ download.bytes_downloaded | number }} / {{ download.estimated_bytes ? (download.estimated_bytes | number) : 'unknown' }} bytes</small>
           <div class="download-bar">
             <i [style.width.%]="downloadPercent(download)"></i>
           </div>
+        </div>
+        <div class="download-copy selected" *ngIf="!selectedDownload">
+          <span>{{ selectedDownloadStatusText }}</span>
+          <small>{{ downloadDescription(selectedDownloadModel) }}</small>
         </div>
         <p class="inline-message download" *ngIf="downloadMessage">{{ downloadMessage }}</p>
       </div>
