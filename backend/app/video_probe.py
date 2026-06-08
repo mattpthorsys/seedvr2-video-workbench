@@ -1,14 +1,43 @@
 from __future__ import annotations
 
 import json
+import re
+import shutil
 import subprocess
 from pathlib import Path
-from typing import Any
+from typing import Any, BinaryIO
 
 from .schemas import AudioStream, VideoMetadata
 
 
-VIDEO_EXTENSIONS = {".avi", ".m2ts", ".m4v", ".mkv", ".mov", ".mp4", ".mpeg", ".mpg", ".ts", ".vob", ".webm", ".wmv"}
+VIDEO_EXTENSIONS = {
+    ".3g2",
+    ".3gp",
+    ".asf",
+    ".avi",
+    ".divx",
+    ".dv",
+    ".f4v",
+    ".flv",
+    ".m2ts",
+    ".m2v",
+    ".m4v",
+    ".mkv",
+    ".mov",
+    ".mp4",
+    ".mpeg",
+    ".mpg",
+    ".mts",
+    ".mxf",
+    ".ogm",
+    ".ogv",
+    ".rm",
+    ".rmvb",
+    ".ts",
+    ".vob",
+    ".webm",
+    ".wmv",
+}
 
 
 def parse_fraction(value: str | None) -> float | None:
@@ -136,3 +165,35 @@ def list_input_files(data_dir: Path) -> list[dict[str, Any]]:
             )
     return files
 
+
+def safe_upload_filename(filename: str) -> str:
+    basename = Path(filename).name.strip()
+    cleaned = re.sub(r"[^A-Za-z0-9._ -]+", "_", basename)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip(" .")
+    if not cleaned:
+        raise ValueError("Upload must include a filename")
+    if Path(cleaned).suffix.lower() not in VIDEO_EXTENSIONS:
+        raise ValueError(f"Unsupported video type: {Path(cleaned).suffix or '(none)'}")
+    return cleaned
+
+
+def save_uploaded_video(data_dir: Path, filename: str, source: BinaryIO) -> dict[str, Any]:
+    input_dir = data_dir / "input"
+    input_dir.mkdir(parents=True, exist_ok=True)
+    safe_name = safe_upload_filename(filename)
+    target = input_dir / safe_name
+    if target.exists():
+        stem = target.stem
+        suffix = target.suffix
+        counter = 2
+        while target.exists():
+            target = input_dir / f"{stem}-{counter}{suffix}"
+            counter += 1
+    with target.open("wb") as destination:
+        shutil.copyfileobj(source, destination)
+    return {
+        "name": target.name,
+        "path": str(target),
+        "relative_path": str(target.relative_to(input_dir)),
+        "size_bytes": target.stat().st_size,
+    }

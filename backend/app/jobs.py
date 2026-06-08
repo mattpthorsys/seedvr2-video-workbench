@@ -13,6 +13,7 @@ from .gpu import read_gpu_snapshot
 from .models import PIPELINE_STAGES, TERMINAL_JOB_STATUSES
 from .pipeline.stats import update_performance_profiles
 from .schemas import JobCreate
+from .video_probe import run_ffprobe, safe_data_path
 
 
 TARGET_HEIGHTS = {"720p": 720, "1080p": 1080, "1440p": 1440, "4k": 2160}
@@ -40,9 +41,13 @@ def _target_size(request: Mapping[str, Any], source_width: int | None, source_he
     return int(round(target_height * aspect / 2) * 2), target_height
 
 
-def _output_path(settings: Settings, input_path: str) -> str:
+OUTPUT_CONTAINERS = {"mkv", "mp4", "mov", "webm"}
+
+
+def _output_path(settings: Settings, input_path: str, container: str | None = None) -> str:
     stem = Path(input_path).stem or "video"
-    return str(settings.data_dir / "output" / f"{stem}_restored.mkv")
+    suffix = container if container in OUTPUT_CONTAINERS else "mkv"
+    return str(settings.data_dir / "output" / f"{stem}_restored.{suffix}")
 
 
 def _metadata_values(request: Mapping[str, Any]) -> dict[str, Any]:
@@ -56,12 +61,43 @@ def _metadata_values(request: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def _ensure_metadata(settings: Settings, data: dict[str, Any]) -> None:
+    if data.get("source_metadata"):
+        return
+    path = safe_data_path(settings.data_dir, data["input_path"], "input")
+    if not path.exists():
+        raise ValueError(f"Input file does not exist: {path}")
+    metadata = run_ffprobe(path, settings.ffprobe_path)
+    data["source_metadata"] = metadata.model_dump() if hasattr(metadata, "model_dump") else metadata.dict()
+
+
+def _resolve_encode_options(settings: Settings, encode: dict[str, Any]) -> dict[str, Any]:
+    resolved = dict(encode)
+    hardware = resolved.get("hardware") or "auto"
+    if hardware == "auto":
+        gpu = read_gpu_snapshot().as_dict()
+        resolved["hardware"] = "nvenc" if settings.prefer_gpu and gpu.get("available") else "cpu"
+    if resolved.get("container") not in OUTPUT_CONTAINERS:
+        resolved["container"] = "mkv"
+    if not resolved.get("audio_mode"):
+        resolved["audio_mode"] = "copy" if resolved.get("copy_audio", True) else "none"
+    if resolved["container"] == "webm":
+        resolved["codec"] = "av1"
+        if resolved.get("audio_mode") == "copy":
+            resolved["audio_mode"] = "opus"
+    if resolved["container"] in {"mp4", "mov"} and resolved.get("audio_mode") == "opus":
+        resolved["audio_mode"] = "aac"
+    return resolved
+
+
 def create_job(conn: sqlite3.Connection, settings: Settings, request: JobCreate | Mapping[str, Any]) -> dict[str, Any]:
     data = _model_dump(request)
+    _ensure_metadata(settings, data)
     metadata = _metadata_values(data)
     target_width, target_height = _target_size(data, metadata["source_width"], metadata["source_height"])
     seedvr2 = data.get("seedvr2") or {}
-    encode = data.get("encode") or {}
+    encode = _resolve_encode_options(settings, data.get("encode") or {})
+    data["encode"] = encode
     now = utc_now()
     options_json = json.dumps(data, sort_keys=True)
 
@@ -74,7 +110,7 @@ def create_job(conn: sqlite3.Connection, settings: Settings, request: JobCreate 
         "seedvr2_precision": seedvr2.get("precision"),
         "batch_size": seedvr2.get("batch_size"),
         "temporal_overlap": seedvr2.get("temporal_overlap"),
-        "encoder": encode.get("codec"),
+        "encoder": f"{encode.get('codec')}-{encode.get('hardware')}",
         "frames_total": metadata.get("source_frame_count") or 300,
     }
     estimate = estimate_job(conn, estimate_context)
@@ -91,7 +127,7 @@ def create_job(conn: sqlite3.Connection, settings: Settings, request: JobCreate 
         """,
         (
             data["input_path"],
-            _output_path(settings, data["input_path"]),
+            _output_path(settings, data["input_path"], encode.get("container")),
             now,
             now,
             metadata["source_width"],
@@ -106,7 +142,7 @@ def create_job(conn: sqlite3.Connection, settings: Settings, request: JobCreate 
             seedvr2.get("precision"),
             seedvr2.get("batch_size"),
             seedvr2.get("temporal_overlap"),
-            encode.get("codec"),
+            f"{encode.get('codec')}-{encode.get('hardware')}",
             encode.get("quality"),
             estimate["estimated_total_seconds"],
             estimate["confidence"],
@@ -334,6 +370,10 @@ def run_job(conn: sqlite3.Connection, job_id: int, settings: Settings, sleep_sec
         (gpu.get("name"), gpu.get("driver_version"), gpu.get("cuda_version"), job_id),
     )
     conn.commit()
+    if settings.require_gpu_for_real_pipeline and not settings.mock_pipeline and not gpu.get("available"):
+        message = "GPU is required for the real SeedVR2 pipeline, but nvidia-smi is not visible."
+        _mark_complete(conn, job_id, "failed", job_started, message)
+        return get_job(conn, job_id) or {}
     append_log(conn, job_id, "Pipeline runner is using the mock stage executor." if settings.mock_pipeline else "Pipeline runner started.")
 
     try:
@@ -389,4 +429,3 @@ def run_next_job(conn: sqlite3.Connection, settings: Settings, sleep_seconds: fl
         return None
     run_job(conn, job_id, settings, sleep_seconds=sleep_seconds)
     return job_id
-

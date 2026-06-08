@@ -54,10 +54,13 @@ class SeedVR2Options(BaseModel):
 
 class EncodeOptions(BaseModel):
     codec: Literal["h264", "h265", "av1"] = "h265"
-    hardware: Literal["cpu", "nvenc"] = "nvenc"
+    hardware: Literal["auto", "cpu", "nvenc"] = "auto"
+    container: Literal["mkv", "mp4", "mov", "webm"] = "mkv"
     quality: float = 20
     preset: str = "medium"
     copy_audio: bool = True
+    audio_mode: Literal["copy", "aac", "opus", "none"] = "copy"
+    audio_bitrate: str = "192k"
 
 
 class JobCreate(BaseModel):
@@ -108,3 +111,12 @@ class HealthResponse(BaseModel):
     database: str
     gpu: dict[str, Any] | None = None
 
+
+class ModelTestRequest(BaseModel):
+    model: Literal["3B", "7B", "custom"] = "3B"
+    custom_model_path: str | None = None
+    precision: Literal["FP8", "GGUF", "FP16", "auto"] = "auto"
+    batch_size: int = 1
+    temporal_overlap: int = 0
+    run_inference: bool = False
+    timeout_seconds: int = 300

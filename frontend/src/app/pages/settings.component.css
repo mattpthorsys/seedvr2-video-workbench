@@ -5,13 +5,13 @@ dl {
 }
 
 dt {
-  color: #687587;
+  color: #8d9ca2;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 800;
+  text-transform: uppercase;
 }
 
 dd {
   margin: 2px 0 0;
   overflow-wrap: anywhere;
 }
-

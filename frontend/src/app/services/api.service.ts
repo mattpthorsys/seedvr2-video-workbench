@@ -50,6 +50,29 @@ export interface StageStat {
   effective_fps?: number;
 }
 
+export interface ModelStatus {
+  ok: boolean;
+  message: string;
+  gpu: Record<string, unknown>;
+  cli: { path: string; exists: boolean };
+  model_dir: string;
+  models: Array<{ name: string; ready: boolean; path: string; file_count: number; model_file_count: number; size_bytes: number }>;
+  mock_pipeline: boolean;
+}
+
+export interface ModelTestResult {
+  ok: boolean;
+  status: string;
+  message: string;
+  gpu: Record<string, unknown>;
+  model: Record<string, unknown>;
+  prepared_input_path?: string;
+  output_path?: string;
+  command?: string[];
+  inference_ran: boolean;
+  log_path: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   constructor(private http: HttpClient) {}
@@ -66,8 +89,22 @@ export class ApiService {
     return this.http.get<InputFile[]>('/api/files/input');
   }
 
+  uploadInput(file: File): Observable<InputFile> {
+    const body = new FormData();
+    body.append('file', file);
+    return this.http.post<InputFile>('/api/files/input/upload', body);
+  }
+
   probe(inputPath: string): Observable<VideoMetadata> {
     return this.http.post<VideoMetadata>('/api/probe', { input_path: inputPath });
+  }
+
+  models(): Observable<ModelStatus> {
+    return this.http.get<ModelStatus>('/api/models');
+  }
+
+  testModel(payload: unknown): Observable<ModelTestResult> {
+    return this.http.post<ModelTestResult>('/api/models/test', payload);
   }
 
   jobs(): Observable<Job[]> {
@@ -102,4 +139,3 @@ export class ApiService {
     return this.http.get<Array<Record<string, unknown>>>('/api/stats/performance-profiles');
   }
 }
-

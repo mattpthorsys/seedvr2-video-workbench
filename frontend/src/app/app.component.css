@@ -1,11 +1,14 @@
 .shell {
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
+  grid-template-columns: 258px minmax(0, 1fr);
   min-height: 100vh;
 }
 
 .sidebar {
-  background: #18202b;
+  background:
+    linear-gradient(180deg, rgba(25, 31, 35, 0.98), rgba(13, 15, 18, 0.98)),
+    #111417;
+  border-right: 1px solid #2d363d;
   color: #ffffff;
   padding: 24px 18px;
 }
@@ -14,45 +17,53 @@
   display: flex;
   gap: 12px;
   align-items: center;
-  margin-bottom: 28px;
+  margin-bottom: 30px;
+}
+
+.brand strong {
+  display: block;
+  font-size: 18px;
 }
 
 .brand-mark {
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   border-radius: 8px;
   display: grid;
   place-items: center;
-  background: #63b7a5;
-  color: #10231f;
-  font-weight: 800;
+  background: linear-gradient(135deg, #64bda9, #d7a35a);
+  color: #101214;
+  font-weight: 900;
 }
 
 .brand small {
   display: block;
-  color: #bac6d2;
+  color: #9ba9af;
 }
 
 nav {
   display: grid;
-  gap: 6px;
+  gap: 7px;
 }
 
 nav a {
-  color: #dce4ed;
+  color: #dce4e7;
   text-decoration: none;
-  padding: 10px 12px;
+  padding: 11px 12px;
+  border: 1px solid transparent;
   border-radius: 6px;
 }
 
 nav a.active,
 nav a:hover {
-  background: #283646;
+  background: #20282d;
+  border-color: #34434a;
+  color: #ffffff;
 }
 
 main {
-  padding: 28px;
   min-width: 0;
+  padding: 28px;
 }
 
 @media (max-width: 980px) {
@@ -78,4 +89,3 @@ main {
     grid-template-columns: 1fr;
   }
 }
-

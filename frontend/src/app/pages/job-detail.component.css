@@ -9,18 +9,22 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
-  margin-top: 16px;
+  margin: 16px 0;
 }
 
 .job-facts div {
-  border: 1px solid #e2e7ee;
+  background: #12181c;
+  border: 1px solid #303941;
   border-radius: 6px;
   padding: 10px;
 }
 
 .job-facts span {
-  color: #687587;
-  font-size: 13px;
+  color: #8d9ca2;
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
 }
 
 .job-facts strong {
@@ -30,7 +34,8 @@
 
 .progress-bar {
   height: 16px;
-  background: #dfe5ec;
+  background: #101519;
+  border: 1px solid #303941;
   border-radius: 999px;
   overflow: hidden;
   margin-bottom: 14px;
@@ -39,7 +44,7 @@
 .progress-bar span {
   display: block;
   height: 100%;
-  background: #1c6b5d;
+  background: linear-gradient(90deg, #64bda9, #d7a35a);
 }
 
 @media (max-width: 980px) {
@@ -53,4 +58,3 @@
     grid-template-columns: 1fr;
   }
 }
-

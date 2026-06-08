@@ -4,7 +4,7 @@ import threading
 from contextlib import contextmanager
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
@@ -12,8 +12,9 @@ from .db import connect, init_db, row_to_dict
 from .eta import estimate_job
 from .gpu import read_gpu_snapshot
 from .jobs import cancel_job, create_job, get_job, get_stage_stats, list_jobs, read_logs, run_job
-from .schemas import JobCreate, ProbeRequest
-from .video_probe import list_input_files, run_ffprobe, safe_data_path
+from .model_check import inspect_seedvr2_environment, test_seedvr2_model
+from .schemas import JobCreate, ModelTestRequest, ProbeRequest
+from .video_probe import list_input_files, run_ffprobe, safe_data_path, save_uploaded_video
 
 settings = get_settings()
 app = FastAPI(title="SeedVR2 Video Workbench API", version="0.1.0")
@@ -64,6 +65,8 @@ def api_settings() -> dict[str, Any]:
         "seedvr2_model_dir": str(settings.seedvr2_model_dir),
         "mock_pipeline": settings.mock_pipeline,
         "run_in_process_worker": settings.run_in_process_worker,
+        "prefer_gpu": settings.prefer_gpu,
+        "require_gpu_for_real_pipeline": settings.require_gpu_for_real_pipeline,
         "ffmpeg_path": settings.ffmpeg_path,
         "ffprobe_path": settings.ffprobe_path,
     }
@@ -82,6 +85,24 @@ def probe(request: ProbeRequest) -> dict[str, Any]:
 @app.get("/api/files/input")
 def input_files() -> list[dict[str, Any]]:
     return list_input_files(settings.data_dir)
+
+
+@app.post("/api/files/input/upload")
+def upload_input_file(file: UploadFile = File(...)) -> dict[str, Any]:
+    try:
+        return save_uploaded_video(settings.data_dir, file.filename or "", file.file)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/models")
+def models() -> dict[str, Any]:
+    return inspect_seedvr2_environment(settings)
+
+
+@app.post("/api/models/test")
+def test_model(request: ModelTestRequest) -> dict[str, Any]:
+    return test_seedvr2_model(settings, request)
 
 
 @app.get("/api/jobs")
@@ -204,4 +225,3 @@ def _dump_model(model: Any) -> dict[str, Any]:
     if hasattr(model, "model_dump"):
         return model.model_dump()
     return model.dict()
-

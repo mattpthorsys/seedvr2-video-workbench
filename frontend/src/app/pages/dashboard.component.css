@@ -6,21 +6,24 @@
 }
 
 .metrics > div {
-  background: #ffffff;
-  border: 1px solid #d8dee7;
+  background: linear-gradient(180deg, #1c2327, #161b1f);
+  border: 1px solid #303941;
   border-radius: 8px;
   padding: 18px;
 }
 
 .metrics span {
   display: block;
+  color: #f3f7f8;
   font-size: 28px;
-  font-weight: 800;
+  font-weight: 850;
 }
 
 .metrics label {
-  color: #687587;
+  color: #8d9ca2;
   font-size: 13px;
+  font-weight: 750;
+  text-transform: uppercase;
 }
 
 .file-list {
@@ -35,8 +38,12 @@
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  border-bottom: 1px solid #e7ebf0;
+  border-bottom: 1px solid #303941;
   padding-bottom: 10px;
+}
+
+.file-list small {
+  color: #8d9ca2;
 }
 
 @media (max-width: 980px) {
@@ -51,4 +58,3 @@
     flex-direction: column;
   }
 }
-

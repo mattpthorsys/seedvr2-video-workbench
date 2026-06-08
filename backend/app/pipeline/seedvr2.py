@@ -49,12 +49,12 @@ class SeedVR2Adapter:
             command.append("--colour-correction")
         return command
 
-    def run(self, input_path: Path, output_path: Path, options: SeedVR2Options, log_file: Path) -> None:
+    def run(self, input_path: Path, output_path: Path, options: SeedVR2Options, log_file: Path, timeout_seconds: int | None = None) -> None:
         command = self.build_command(input_path, output_path, options)
         log_file.parent.mkdir(parents=True, exist_ok=True)
         with log_file.open("a", encoding="utf-8") as handle:
             handle.write("$ " + " ".join(command) + "\n")
-            result = subprocess.run(command, stdout=handle, stderr=subprocess.STDOUT, text=True, check=False)
+            result = subprocess.run(command, stdout=handle, stderr=subprocess.STDOUT, text=True, check=False, timeout=timeout_seconds)
         if result.returncode != 0:
             raise RuntimeError(f"SeedVR2 failed with exit code {result.returncode}")
 
@@ -67,4 +67,3 @@ class MockSeedVR2Runner:
                 "Mock SeedVR2 runner used. Mount the real repository and set SEEDVR2_CLI_PATH "
                 "to perform actual upscaling.\n"
             )
-

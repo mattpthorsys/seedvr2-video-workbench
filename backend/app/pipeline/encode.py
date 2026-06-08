@@ -15,6 +15,16 @@ def _codec_args(options: EncodeOptions) -> list[str]:
     return ["-c:v", "libx264"]
 
 
+def _audio_args(options: EncodeOptions) -> list[str]:
+    if not options.copy_audio or options.audio_mode == "none":
+        return ["-an"]
+    if options.audio_mode == "copy":
+        return ["-c:a", "copy"]
+    if options.audio_mode == "opus":
+        return ["-c:a", "libopus", "-b:a", options.audio_bitrate]
+    return ["-c:a", "aac", "-b:a", options.audio_bitrate, "-af", "aresample=async=1:first_pts=0"]
+
+
 def build_encode_command(
     ffmpeg_path: str,
     upscaled_video: Path,
@@ -22,14 +32,26 @@ def build_encode_command(
     output_path: Path,
     options: EncodeOptions,
 ) -> list[str]:
-    command = [ffmpeg_path, "-y", "-i", str(upscaled_video)]
+    command = [
+        ffmpeg_path,
+        "-y",
+        "-fflags",
+        "+genpts",
+        "-i",
+        str(upscaled_video),
+    ]
     if options.copy_audio:
-        command.extend(["-i", str(original_input), "-map", "0:v:0", "-map", "1:a?", "-c:a", "copy"])
+        command.extend(["-i", str(original_input), "-map", "0:v:0", "-map", "1:a?", "-map_metadata", "1", "-map_chapters", "1"])
+    else:
+        command.extend(["-map", "0:v:0"])
     command.extend(_codec_args(options))
+    command.extend(_audio_args(options))
     if options.hardware == "nvenc":
         command.extend(["-cq", str(options.quality), "-preset", options.preset])
     else:
         command.extend(["-crf", str(options.quality), "-preset", options.preset])
+    command.extend(["-avoid_negative_ts", "make_zero", "-max_interleave_delta", "0", "-shortest"])
+    if options.container in {"mp4", "mov"}:
+        command.extend(["-movflags", "+faststart"])
     command.append(str(output_path))
     return command
-

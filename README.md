@@ -21,10 +21,13 @@ What is real:
 - REST API endpoints under `/api`
 - SQLite schema and auto-init
 - input file listing from `/data/input`
+- browser file picker uploads into `/data/input`
 - FFprobe metadata parsing when FFprobe can read the source
 - job creation, cancellation flags, progress, logs, stages, ETA history
 - historical performance profiles after completed mock jobs
 - NVIDIA stats collection when `nvidia-smi` is available
+- GPU-first defaults with NVIDIA NVENC selected automatically when visible
+- SeedVR2 model inventory and smoke-test endpoints
 - FFmpeg preprocessing and encode command builders
 - SeedVR2 CLI adapter and setup error path
 
@@ -32,6 +35,7 @@ What is mocked:
 
 - The worker currently simulates pipeline stages by default with `MOCK_PIPELINE=true`.
 - Real SeedVR2 inference is not claimed to work until the actual SeedVR2 repository/CLI is mounted and `SEEDVR2_CLI_PATH` points to it.
+- The model smoke test can run real inference only after SeedVR2 CLI and model files are mounted.
 - VapourSynth/QTGMC is documented as optional and detected, but not fully wired into the v1 runner.
 
 ## Requirements
@@ -97,6 +101,8 @@ Models should be mounted or copied under:
 ./models
 ```
 
+The GUI New Job page also has a file picker. Picked files are copied into `./data/input` before probing and queueing.
+
 ## SeedVR2 Configuration
 
 The default `.env.example` values are:
@@ -115,6 +121,22 @@ To connect the real SeedVR2 CLI:
 4. Set `MOCK_PIPELINE=false` once the real command path is executable.
 
 The adapter is in `backend/app/pipeline/seedvr2.py`.
+
+## Model And GPU Tests
+
+The New Job page can inspect the GPU, configured SeedVR2 CLI path, and model folders. It can also run a small model check:
+
+- Dry Run Command creates a tiny test clip and verifies that a SeedVR2 command can be built.
+- Run Live Smoke Test runs the configured SeedVR2 CLI against that clip and checks that output is produced.
+
+The same readiness data is available at:
+
+```text
+GET http://localhost:8000/api/models
+POST http://localhost:8000/api/models/test
+```
+
+The backend and worker both request GPU access in Docker Compose. With the RTX 5060 Ti visible to Docker, the app defaults to NVIDIA/NVENC paths when `PREFER_GPU=true`.
 
 ## Windows 11, WSL2, Docker, NVIDIA Notes
 
@@ -137,6 +159,9 @@ GET    /api/health
 GET    /api/settings
 POST   /api/probe
 GET    /api/files/input
+POST   /api/files/input/upload
+GET    /api/models
+POST   /api/models/test
 GET    /api/jobs
 POST   /api/jobs
 GET    /api/jobs/{id}
@@ -211,6 +236,8 @@ Covered areas:
 - FFprobe JSON parsing
 - job state transitions
 - performance stats aggregation
+- audio/output container command construction
+- model readiness reporting
 
 ## Troubleshooting
 

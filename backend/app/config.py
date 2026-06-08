@@ -29,6 +29,8 @@ class Settings:
     run_in_process_worker: bool
     ffmpeg_path: str
     ffprobe_path: str
+    prefer_gpu: bool
+    require_gpu_for_real_pipeline: bool
 
     @property
     def database_path(self) -> Path:
@@ -47,5 +49,6 @@ def get_settings() -> Settings:
         run_in_process_worker=_as_bool(os.getenv("RUN_IN_PROCESS_WORKER"), False),
         ffmpeg_path=os.getenv("FFMPEG_PATH", "ffmpeg"),
         ffprobe_path=os.getenv("FFPROBE_PATH", "ffprobe"),
+        prefer_gpu=_as_bool(os.getenv("PREFER_GPU"), True),
+        require_gpu_for_real_pipeline=_as_bool(os.getenv("REQUIRE_GPU_FOR_REAL_PIPELINE"), True),
     )
-

@@ -25,6 +25,8 @@ def settings(tmp_path: Path) -> Settings:
         run_in_process_worker=False,
         ffmpeg_path="ffmpeg",
         ffprobe_path="ffprobe",
+        prefer_gpu=False,
+        require_gpu_for_real_pipeline=False,
     )
 
 
@@ -36,4 +38,3 @@ def conn(settings: Settings):
         yield database
     finally:
         database.close()
-
